@@ -1,0 +1,19 @@
+# Build output folders
+*[Bb]uild/
+
+# Microsoft Visual Studio / VS Code
+.vs/
+.vscode/
+*.vcxproj*
+*.sln
+
+# Notepad ++ backups
+nppBackup/
+
+# Binaries
+*.lib
+*.dll
+*.exe
+
+# Debug
+*.pdb
