@@ -30,6 +30,7 @@ namespace net
 
 		int			create(const std::string& hostname,
 						   const std::string& port, bool server = false);
+		int			close(void)												const;
 
 
 		Socket		accept(/*IPData& incomingData*/)						const;
@@ -47,7 +48,6 @@ namespace net
 
 	private:
 
-		int			close(void)												const;
 		int			connect(void* addrData)									const;
 
 		int			bind(void* addrData)									const;
