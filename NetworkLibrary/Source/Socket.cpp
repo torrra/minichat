@@ -284,6 +284,35 @@ namespace net
 		return result;
 	}
 
+	void Socket::displayLocalIP()
+	{
+		char		stringBuf[INET6_ADDRSTRLEN];
+		char* ip;
+		hostent* hostEntry;
 
+		gethostname(stringBuf, INET6_ADDRSTRLEN);
+		hostEntry = gethostbyname(stringBuf);
+		ip = inet_ntoa(*(reinterpret_cast<in_addr*>(hostEntry->h_addr_list[0])));
+
+
+		std::cout << "Local address: " << ip << '\n';
+	}
+
+	int Socket::connect(void* addrData) const
+	{
+		int				result;
+		sockaddr_in* server = static_cast<sockaddr_in*>(addrData);
+
+		result = ::connect(m_handle, (sockaddr*)server, sizeof * server);
+
+		if (result != NET_NO_ERROR)
+		{
+			std::cerr << "Error: connect: " << WSAGetLastError() << "\n";
+			this->close();
+			result = NET_WSA_CONNECT_ERROR;
+		}
+
+		return result;
+	}
 
 }
