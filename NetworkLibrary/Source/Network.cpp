@@ -33,10 +33,10 @@ namespace net
         if (error)
 	    {
 			reportWSAError("WSAStartup", error);
-			return NetResult::NET_WSA_STARTUP_ERROR;
+			return error;
 		}
 
-        return NetResult::NET_NO_ERROR;
+        return error;
 
     }
 
@@ -47,10 +47,10 @@ namespace net
 		if (SOCKET_ERROR == error)
 		{
             reportWSAError("WSACleanup", error);
-			return NetResult::NET_WSA_CLEANUP_ERROR;
+			return error;
 		}
 
-        return NetResult::NET_NO_ERROR;
+        return error;
     }
 
 

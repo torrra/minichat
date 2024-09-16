@@ -1,13 +1,11 @@
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #include "Socket.h"
 #include "IPData.h"
 #include "ErrorHandling.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
-#include <iostream> // TODO:error handling
 #include <string.h>
 
 
@@ -35,8 +33,7 @@ namespace net
 		IPData		connectionData
 		{
 			.m_ipString = hostname,
-			.m_ipAddress = inet_addr(hostname.c_str()),
-			//.m_ipVersion = this->m_ipVersion
+			.m_ipAddress = inet_addr(hostname.c_str())
 		};
 
 		if (isalpha(hostname[0]))
@@ -56,7 +53,7 @@ namespace net
 			result = initClientSocket(&connectionData);
 
 
-		if (result == NET_NO_ERROR)
+		if (result == NO_ERROR)
 			displayLocalIP();
 
 		freeaddrinfo(reinterpret_cast<addrinfo*>(connectionData.m_addrInfo));
@@ -143,7 +140,7 @@ namespace net
 	{
 		int		result = ::closesocket(m_handle);
 
-		if (result != NET_NO_ERROR)
+		if (result != NO_ERROR)
 			reportWSAError("::close", WSAGetLastError());
 
 		return result;
@@ -153,7 +150,7 @@ namespace net
 	{
 		int		result = ::listen(m_handle, m_pendingConnectionCap);
 
-		if (result != NET_NO_ERROR)
+		if (result != NO_ERROR)
 			reportWSAError("::listen", WSAGetLastError());
 
 		return result;
@@ -166,11 +163,10 @@ namespace net
 
 		result = ::bind(m_handle, server, sizeof * server);
 
-		if (result != NET_NO_ERROR)
+		if (result != NO_ERROR)
 		{
 			reportWSAError("::bind", WSAGetLastError());
 			this->close();
-			result = NET_WSA_BIND_ERROR;
 		}
 
 		return result;
@@ -182,7 +178,10 @@ namespace net
 		addrinfo*	addrPointer = static_cast<addrinfo*>(ipData->m_addrInfo);
 
 		if (!addrPointer)
-			return NET_WSA_SOCKET_ERROR;
+		{
+			consoleOutput("createSocket: bad pointer\n");
+			return SOCKET_ERROR;
+		}
 
 		for (addrinfo* ptr = addrPointer; ptr != nullptr; ptr = ptr->ai_next)
 		{
@@ -200,7 +199,7 @@ namespace net
 			break;
 		}
 
-		return NET_NO_ERROR;
+		return NO_ERROR;
 	}
 
 	void Socket::initSocketHints(void* addrData, bool server) const
@@ -209,7 +208,7 @@ namespace net
 
 		if (!hints)
 		{
-			std::cerr << "Error initializing socket hints\n";
+			consoleOutput("initSocketHints: invalid hint pointer");
 			return;
 		}
 
@@ -233,15 +232,18 @@ namespace net
 		initSocketHints(&socketHints, true);
 
 		int		result = getaddrinfo(ipData->m_ipString.c_str(), NULL,
-			&socketHints, (addrinfo**)(&ipData->m_addrInfo));
+									&socketHints,
+									(addrinfo**)(&ipData->m_addrInfo));
 
-		if (result != NET_NO_ERROR)
-			return NET_WSA_SOCKET_ERROR;
+		if (result != NO_ERROR)
+			return result;
+
+
 
 		result = createSocket(ipData);
 
-		if (result != NET_NO_ERROR)
-			__debugbreak();
+		if (result != NO_ERROR)
+			DebugBreak();
 
 		server.sin_addr.s_addr = ipData->m_ipAddress;
 		server.sin_family = AF_INET;
@@ -258,10 +260,11 @@ namespace net
 		initSocketHints(&socketHints, true);
 
 		int		result = getaddrinfo(ipData->m_ipString.c_str(), NULL,
-			&socketHints, (addrinfo**)(&ipData->m_addrInfo));
+									&socketHints,
+									(addrinfo**)(&ipData->m_addrInfo));
 
-		if (result != NET_NO_ERROR)
-			return NET_WSA_SOCKET_ERROR;
+		if (result != NO_ERROR)
+			return result;
 
 		result = createSocket(ipData);
 
@@ -270,7 +273,6 @@ namespace net
 		server.sin_addr.s_addr = INADDR_ANY;
 		server.sin_family = AF_INET;
 		server.sin_port = htons(ipData->m_portNumber);
-		//server.
 
 		result = this->bind(&server);
 
@@ -282,29 +284,27 @@ namespace net
 	void Socket::displayLocalIP()
 	{
 		char		stringBuf[INET6_ADDRSTRLEN];
-		char* ip;
-		hostent* hostEntry;
+		char*		ip;
+		hostent*	hostEntry;
 
 		gethostname(stringBuf, INET6_ADDRSTRLEN);
 		hostEntry = gethostbyname(stringBuf);
 		ip = inet_ntoa(*(reinterpret_cast<in_addr*>(hostEntry->h_addr_list[0])));
 
-
-		std::cout << "Local address: " << ip << '\n';
+		consoleOutput("Local address: %1\n", ip);
 	}
 
 	int Socket::connect(void* addrData) const
 	{
 		int				result;
-		sockaddr_in* server = static_cast<sockaddr_in*>(addrData);
+		sockaddr_in*	server = static_cast<sockaddr_in*>(addrData);
 
 		result = ::connect(m_handle, (sockaddr*)server, sizeof * server);
 
-		if (result != NET_NO_ERROR)
+		if (result != NO_ERROR)
 		{
-			std::cerr << "Error: connect: " << WSAGetLastError() << "\n";
+			reportWSAError("::connect", WSAGetLastError());
 			this->close();
-			result = NET_WSA_CONNECT_ERROR;
 		}
 
 		return result;

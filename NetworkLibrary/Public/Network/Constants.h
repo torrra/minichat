@@ -2,7 +2,7 @@
 
 namespace net
 {
-	enum NetResult : int
+	/*enum NetResult : int
 	{
 		NET_NO_ERROR          =	0,
 
@@ -21,5 +21,5 @@ namespace net
 	{
 		IP_V4,
 		IP_V6
-	};
+	};*/
 }
