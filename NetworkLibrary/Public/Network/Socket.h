@@ -24,7 +24,8 @@ namespace net
 	public:
 
 					Socket(void) = default;
-					Socket(Handle_t handle, IPVersion version);
+					Socket(Handle_t handle);
+
 					~Socket(void);
 
 		int			create(const std::string& hostname,
@@ -39,7 +40,6 @@ namespace net
 		int			receive(void* data, int size)							const;
 
 		Handle_t	getHandle()												const;
-		IPVersion	getIPVersion()											const;
 
 					operator bool(void)										const;
 
@@ -62,7 +62,6 @@ namespace net
 		void		displayLocalIP();
 
 		Handle_t	m_handle = SocketParams::INVALID_HANDLE;
-		IPVersion	m_ipVersion = IPVersion::IP_V4;
 
 		static int  m_pendingConnectionCap;
 

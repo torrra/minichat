@@ -1,21 +1,22 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
+#include "Socket.h"
+#include "IPData.h"
+#include "ErrorHandling.h"
+
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
 #include <iostream> // TODO:error handling
 #include <string.h>
-
-#include "Socket.h"
-#include "IPData.h"
 
 
 namespace net
 {
 	int  Socket::m_pendingConnectionCap = 5;
 
-	Socket::Socket(Handle_t handle, IPVersion version)
-		: m_handle(handle), m_ipVersion(version)
+	Socket::Socket(Handle_t handle)
+		: m_handle(handle)
 	{
 	}
 
@@ -27,12 +28,15 @@ namespace net
 	int Socket::create(const std::string& hostname,
 		const std::string& port, bool server)
 	{
+
+		reportWSAError("Socket::create", 1234);
+
 		int			result;
 		IPData		connectionData
 		{
 			.m_ipString = hostname,
 			.m_ipAddress = inet_addr(hostname.c_str()),
-			.m_ipVersion = this->m_ipVersion
+			//.m_ipVersion = this->m_ipVersion
 		};
 
 		if (isalpha(hostname[0]))
@@ -60,7 +64,7 @@ namespace net
 		return result;
 	}
 
-	Socket Socket::accept(/*IPData& incomingData*/) const
+	Socket Socket::accept() const
 	{
 		Handle_t			acceptedSocket;
 		sockaddr_storage	incomingAddr;
@@ -75,18 +79,18 @@ namespace net
 			&addrLength);
 
 		if (acceptedSocket == SocketParams::INVALID_HANDLE)
-			std::cerr << "Error: accept\n";
+			reportWSAError("Socket::accept", SOCKET_ERROR);
 
 		else
 		{
 			WSAAddressToString(reinterpret_cast<sockaddr*>(&incomingAddr),
 				addrLength, nullptr, addressString, &bufferLength);
 
-			std::cout << "Connection received from: " << addressString << "\n";
+			consoleOutput("Connection received from: %1\n", addressString);
 
 		}
 
-		return Socket(acceptedSocket, m_ipVersion);
+		return Socket(acceptedSocket);
 
 	}
 
@@ -98,8 +102,8 @@ namespace net
 			reinterpret_cast<const char*>(data),
 			size, noFlags);
 
-		if (result != NET_NO_ERROR)
-			std::cerr << "Error: send " << WSAGetLastError() << "\n";
+		if (result == SOCKET_ERROR)
+			reportWSAError("::send", WSAGetLastError());
 
 		return result;
 	}
@@ -109,28 +113,20 @@ namespace net
 		const int	noFlags = 0;
 
 		int			bytesRecv = ::recv(m_handle,
-			reinterpret_cast<char*>(buffer),
-			size, noFlags);
+									   reinterpret_cast<char*>(buffer),
+									   size, noFlags);
 
-		if (!bytesRecv)
-			std::cerr << "Error: no bytes received\n";
-
-		else if (bytesRecv == SOCKET_ERROR)
-			std::cerr << "Error: socket error on receive\n";
+		if (bytesRecv == SOCKET_ERROR)
+			reportWSAError("::recv", WSAGetLastError());
 
 		return bytesRecv;
 	}
-
 
 	Socket::Handle_t Socket::getHandle() const
 	{
 		return m_handle;
 	}
 
-	IPVersion Socket::getIPVersion() const
-	{
-		return m_ipVersion;
-	}
 
 	Socket::operator bool(void) const
 	{
@@ -148,7 +144,7 @@ namespace net
 		int		result = ::closesocket(m_handle);
 
 		if (result != NET_NO_ERROR)
-			std::cerr << "Error: close\n";
+			reportWSAError("::close", WSAGetLastError());
 
 		return result;
 	}
@@ -158,7 +154,7 @@ namespace net
 		int		result = ::listen(m_handle, m_pendingConnectionCap);
 
 		if (result != NET_NO_ERROR)
-			std::cerr << "Error: listen\n";
+			reportWSAError("::listen", WSAGetLastError());
 
 		return result;
 	}
@@ -166,13 +162,13 @@ namespace net
 	int Socket::bind(void* addrData) const
 	{
 		int			result;
-		sockaddr* server = static_cast<sockaddr*>(addrData);
+		sockaddr*	server = static_cast<sockaddr*>(addrData);
 
 		result = ::bind(m_handle, server, sizeof * server);
 
 		if (result != NET_NO_ERROR)
 		{
-			std::cerr << "Error: bind " << WSAGetLastError() << "\n";
+			reportWSAError("::bind", WSAGetLastError());
 			this->close();
 			result = NET_WSA_BIND_ERROR;
 		}
@@ -182,8 +178,8 @@ namespace net
 
 	int Socket::createSocket(void* addrData)
 	{
-		IPData* ipData = static_cast<IPData*>(addrData);
-		addrinfo* addrPointer = static_cast<addrinfo*>(ipData->m_addrInfo);
+		IPData*		ipData = static_cast<IPData*>(addrData);
+		addrinfo*	addrPointer = static_cast<addrinfo*>(ipData->m_addrInfo);
 
 		if (!addrPointer)
 			return NET_WSA_SOCKET_ERROR;
@@ -191,12 +187,12 @@ namespace net
 		for (addrinfo* ptr = addrPointer; ptr != nullptr; ptr = ptr->ai_next)
 		{
 			m_handle = ::socket(ptr->ai_family,
-				ptr->ai_socktype,
-				ptr->ai_protocol);
+								ptr->ai_socktype,
+								ptr->ai_protocol);
 
 			if (m_handle == SocketParams::INVALID_HANDLE)
 			{
-				std::cerr << "Error: target\n";
+				reportWSAError("::socket", WSAGetLastError());;
 				continue;
 			}
 
@@ -206,7 +202,6 @@ namespace net
 
 		return NET_NO_ERROR;
 	}
-
 
 	void Socket::initSocketHints(void* addrData, bool server) const
 	{
@@ -231,7 +226,7 @@ namespace net
 	int Socket::initClientSocket(void* addrData)
 	{
 
-		IPData* ipData = static_cast<IPData*>(addrData);
+		IPData*			ipData = static_cast<IPData*>(addrData);
 		sockaddr_in		server;
 		addrinfo		socketHints;
 
@@ -257,7 +252,7 @@ namespace net
 
 	int Socket::initServerSocket(void* addrData)
 	{
-		IPData* ipData = static_cast<IPData*>(addrData);
+		IPData*		ipData = static_cast<IPData*>(addrData);
 		addrinfo	socketHints;
 
 		initSocketHints(&socketHints, true);
@@ -314,5 +309,4 @@ namespace net
 
 		return result;
 	}
-
 }

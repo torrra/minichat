@@ -6,7 +6,7 @@
 
 namespace net
 {
-	// size: 56B, padding : 1B
+	// size: 56B, padding : 2B
 
 	// Contains information about an IP endpoint
 	struct IPData
@@ -21,6 +21,6 @@ namespace net
 
 		// Port number (host byte order)
 		unsigned short	m_portNumber;
-		IPVersion		m_ipVersion;
+		//IPVersion		m_ipVersion;
 	};
 }
