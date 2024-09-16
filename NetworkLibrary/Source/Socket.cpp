@@ -208,5 +208,26 @@ namespace net
 	}
 
 
+	void Socket::initSocketHints(void* addrData, bool server) const
+	{
+		addrinfo* hints = static_cast<addrinfo*>(addrData);
+
+		if (!hints)
+		{
+			std::cerr << "Error initializing socket hints\n";
+			return;
+		}
+
+		memset(hints, 0, sizeof * hints);
+
+		hints->ai_family = AF_INET;
+		hints->ai_socktype = SOCK_STREAM;
+		hints->ai_protocol = IPPROTO_TCP;
+
+		if (server)
+			hints->ai_flags = AI_PASSIVE;
+	}
+
+
 
 }
