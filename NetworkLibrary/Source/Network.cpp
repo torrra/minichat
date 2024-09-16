@@ -10,25 +10,14 @@
 // TODO: REMOVE
 #include "Platform.h"
 #include "Socket.h"
+#include "ErrorHandling.h"
 
 void network(void)
 {
-    /*nlib::Socket a, b;
-
-    a.createServerSocket("127.0.0.1", "doom");
-    b.createClientSocket("127.0.0.1", "doom");
-
-    b.connectToServer(a);
-
-    b.testSendToServer(a);
-    a.testSendToCLient(b);*/
-
-
-
+    net::initConsole();
     platform();
 }
 
-#include "Constants.h"
 
 namespace net
 {
@@ -43,7 +32,7 @@ namespace net
 
         if (error)
 	    {
-			OutputDebugString(TEXT("[ERROR] Unable to startup WSA.\n"));
+			reportWSAError("WSAStartup", error);
 			return NetResult::NET_WSA_STARTUP_ERROR;
 		}
 
@@ -57,7 +46,7 @@ namespace net
 
 		if (SOCKET_ERROR == error)
 		{
-			OutputDebugString(TEXT("[Error] WSACleanup\n"));
+            reportWSAError("WSACleanup", error);
 			return NetResult::NET_WSA_CLEANUP_ERROR;
 		}
 
