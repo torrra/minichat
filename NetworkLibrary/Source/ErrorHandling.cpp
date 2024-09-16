@@ -88,5 +88,18 @@ namespace net
 
 	}
 
+	void initConsole()
+	{
+		int		dwCodePage;
+		int		localeFlags = LOCALE_IDEFAULTANSICODEPAGE | LOCALE_RETURN_NUMBER;
+		int		success = GetLocaleInfoEx(L"Fr-FR", localeFlags,
+			(LPWSTR)&dwCodePage,
+			sizeof dwCodePage / sizeof WCHAR);
+
+		if (success)
+			SetConsoleOutputCP(dwCodePage);
+		else
+			reportWSAError("initConsole", GetLastError());
+	}
 
 }
