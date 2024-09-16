@@ -90,5 +90,36 @@ namespace net
 
 	}
 
+	int Socket::send(const Socket& target, const void* data, int size) const
+	{
+		const int	noFlags = 0;
+
+		int			result = ::send(target.m_handle,
+			reinterpret_cast<const char*>(data),
+			size, noFlags);
+
+		if (result != NET_NO_ERROR)
+			std::cerr << "Error: send " << WSAGetLastError() << "\n";
+
+		return result;
+	}
+
+	int Socket::receive(void* buffer, int size) const
+	{
+		const int	noFlags = 0;
+
+		int			bytesRecv = ::recv(m_handle,
+			reinterpret_cast<char*>(buffer),
+			size, noFlags);
+
+		if (!bytesRecv)
+			std::cerr << "Error: no bytes received\n";
+
+		else if (bytesRecv == SOCKET_ERROR)
+			std::cerr << "Error: socket error on receive\n";
+
+		return bytesRecv;
+	}
+
 
 }
