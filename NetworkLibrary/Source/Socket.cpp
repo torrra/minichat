@@ -60,5 +60,35 @@ namespace net
 		return result;
 	}
 
+	Socket Socket::accept(/*IPData& incomingData*/) const
+	{
+		Handle_t			acceptedSocket;
+		sockaddr_storage	incomingAddr;
+
+		char				addressString[INET6_ADDRSTRLEN];
+		unsigned long		bufferLength = INET6_ADDRSTRLEN;
+
+		int					addrLength = sizeof incomingAddr;
+
+		acceptedSocket = ::accept(m_handle,
+			reinterpret_cast<sockaddr*>(&incomingAddr),
+			&addrLength);
+
+		if (acceptedSocket == SocketParams::INVALID_HANDLE)
+			std::cerr << "Error: accept\n";
+
+		else
+		{
+			WSAAddressToString(reinterpret_cast<sockaddr*>(&incomingAddr),
+				addrLength, nullptr, addressString, &bufferLength);
+
+			std::cout << "Connection received from: " << addressString << "\n";
+
+		}
+
+		return Socket(acceptedSocket, m_ipVersion);
+
+	}
+
 
 }
