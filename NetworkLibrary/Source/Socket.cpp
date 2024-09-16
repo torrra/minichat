@@ -143,6 +143,42 @@ namespace net
 	}
 
 
+	int Socket::close() const
+	{
+		int		result = ::closesocket(m_handle);
+
+		if (result != NET_NO_ERROR)
+			std::cerr << "Error: close\n";
+
+		return result;
+	}
+
+	int Socket::listen(void) const
+	{
+		int		result = ::listen(m_handle, m_pendingConnectionCap);
+
+		if (result != NET_NO_ERROR)
+			std::cerr << "Error: listen\n";
+
+		return result;
+	}
+
+	int Socket::bind(void* addrData) const
+	{
+		int			result;
+		sockaddr* server = static_cast<sockaddr*>(addrData);
+
+		result = ::bind(m_handle, server, sizeof * server);
+
+		if (result != NET_NO_ERROR)
+		{
+			std::cerr << "Error: bind " << WSAGetLastError() << "\n";
+			this->close();
+			result = NET_WSA_BIND_ERROR;
+		}
+
+		return result;
+	}
 
 
 
