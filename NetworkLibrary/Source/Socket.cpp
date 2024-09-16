@@ -180,6 +180,33 @@ namespace net
 		return result;
 	}
 
+	int Socket::createSocket(void* addrData)
+	{
+		IPData* ipData = static_cast<IPData*>(addrData);
+		addrinfo* addrPointer = static_cast<addrinfo*>(ipData->m_addrInfo);
+
+		if (!addrPointer)
+			return NET_WSA_SOCKET_ERROR;
+
+		for (addrinfo* ptr = addrPointer; ptr != nullptr; ptr = ptr->ai_next)
+		{
+			m_handle = ::socket(ptr->ai_family,
+				ptr->ai_socktype,
+				ptr->ai_protocol);
+
+			if (m_handle == SocketParams::INVALID_HANDLE)
+			{
+				std::cerr << "Error: target\n";
+				continue;
+			}
+
+			// Stop at first successful socket created
+			break;
+		}
+
+		return NET_NO_ERROR;
+	}
+
 
 
 }
