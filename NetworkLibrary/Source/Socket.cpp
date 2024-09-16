@@ -122,4 +122,28 @@ namespace net
 	}
 
 
+	Socket::Handle_t Socket::getHandle() const
+	{
+		return m_handle;
+	}
+
+	IPVersion Socket::getIPVersion() const
+	{
+		return m_ipVersion;
+	}
+
+	Socket::operator bool(void) const
+	{
+		return m_handle != SocketParams::INVALID_HANDLE;
+	}
+
+	int& Socket::connectionBackLog()
+	{
+		return m_pendingConnectionCap;
+	}
+
+
+
+
+
 }
