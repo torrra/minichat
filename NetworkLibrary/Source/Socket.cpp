@@ -228,6 +228,62 @@ namespace net
 			hints->ai_flags = AI_PASSIVE;
 	}
 
+	int Socket::initClientSocket(void* addrData)
+	{
+
+		IPData* ipData = static_cast<IPData*>(addrData);
+		sockaddr_in		server;
+		addrinfo		socketHints;
+
+		initSocketHints(&socketHints, true);
+
+		int		result = getaddrinfo(ipData->m_ipString.c_str(), NULL,
+			&socketHints, (addrinfo**)(&ipData->m_addrInfo));
+
+		if (result != NET_NO_ERROR)
+			return NET_WSA_SOCKET_ERROR;
+
+		result = createSocket(ipData);
+
+		if (result != NET_NO_ERROR)
+			__debugbreak();
+
+		server.sin_addr.s_addr = ipData->m_ipAddress;
+		server.sin_family = AF_INET;
+		server.sin_port = htons(ipData->m_portNumber);
+
+		return this->connect(&server);
+	}
+
+	int Socket::initServerSocket(void* addrData)
+	{
+		IPData* ipData = static_cast<IPData*>(addrData);
+		addrinfo	socketHints;
+
+		initSocketHints(&socketHints, true);
+
+		int		result = getaddrinfo(ipData->m_ipString.c_str(), NULL,
+			&socketHints, (addrinfo**)(&ipData->m_addrInfo));
+
+		if (result != NET_NO_ERROR)
+			return NET_WSA_SOCKET_ERROR;
+
+		result = createSocket(ipData);
+
+		sockaddr_in		server;
+
+		server.sin_addr.s_addr = INADDR_ANY;
+		server.sin_family = AF_INET;
+		server.sin_port = htons(ipData->m_portNumber);
+		//server.
+
+		result = this->bind(&server);
+
+		this->listen();
+
+		return result;
+	}
+
 
 
 }
