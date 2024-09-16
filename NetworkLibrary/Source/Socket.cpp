@@ -24,5 +24,41 @@ namespace net
 		this->close();
 	}
 
+	int Socket::create(const std::string& hostname,
+		const std::string& port, bool server)
+	{
+		int			result;
+		IPData		connectionData
+		{
+			.m_ipString = hostname,
+			.m_ipAddress = inet_addr(hostname.c_str()),
+			.m_ipVersion = this->m_ipVersion
+		};
+
+		if (isalpha(hostname[0]))
+			connectionData.m_portNumber = (unsigned short)atoi(port.c_str());
+
+		else
+		{
+			servent* servEntry = getservbyname(port.c_str(), nullptr);
+
+			connectionData.m_portNumber = ntohs(servEntry->s_port);
+		}
+
+		if (server)
+			result = initServerSocket(&connectionData);
+
+		else
+			result = initClientSocket(&connectionData);
+
+
+		if (result == NET_NO_ERROR)
+			displayLocalIP();
+
+		freeaddrinfo(reinterpret_cast<addrinfo*>(connectionData.m_addrInfo));
+
+		return result;
+	}
+
 
 }
