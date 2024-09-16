@@ -47,6 +47,46 @@ namespace net
 	}
 
 
+	void consoleOutput(const char* format, ...)
+	{
+		LPTSTR		buffer;
+		va_list		args;
+		int			formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_STRING;
+
+		va_start(args, format);
+
+		int		charCount = FormatMessageA(formatFlags, (LPTSTR)format, 0,
+			GetUserDefaultLangID(),
+			(LPTSTR)&buffer, 0, &args);
+
+		if (charCount)
+		{
+			void* handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+			if (!WriteConsoleA(handle, buffer, charCount, nullptr, 0))
+			{
+				int		error = GetLastError();
+
+				OutputDebugStringA("WriteConsole format failure\n");
+				(void)error;
+
+			}
+
+			LocalFree(buffer);
+
+		}
+		else
+		{
+			int		error = GetLastError();
+
+			OutputDebugStringA("FormatMessage format failure\n");
+			DebugBreak();
+			(void)error;
+		}
+
+
+	}
 
 
 }
