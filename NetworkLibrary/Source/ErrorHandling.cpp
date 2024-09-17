@@ -31,7 +31,7 @@ namespace net
 
 		if (charCount)
 		{
-			consoleOutput("[ERROR] %1 : %2\n", context, buffer);
+			consoleOutput("[ERROR] %1 : error %3!d!\n%2\n", context, buffer, error);
 			LocalFree(buffer);
 		}
 		else
@@ -101,5 +101,6 @@ namespace net
 		else
 			reportWSAError("initConsole", GetLastError());
 	}
+
 
 }
