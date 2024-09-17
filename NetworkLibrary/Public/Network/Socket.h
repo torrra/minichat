@@ -39,10 +39,15 @@ namespace net
 
 		Socket		accept(void)											const;
 
-		int			send(const Socket& socket,
-						 const void* data, int size)						const;
+		int			sendTo(const Socket& socket,
+						   const void* data, int size)						const;
 
-		int			receive(void* data, int size)							const;
+		int			send(const void* data, int size)						const;
+
+		int			receive(void* buffer, int size)							const;
+
+		int			receiveFrom(const Socket& socket,
+								void* buffer, int size)						const;
 
 		Handle_t	getHandle()												const;
 

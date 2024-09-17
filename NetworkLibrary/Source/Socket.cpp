@@ -159,11 +159,25 @@ namespace net
 
 	}
 
-	int Socket::send(const Socket& target, const void* data, int size) const
+	int Socket::sendTo(const Socket& target, const void* data, int size) const
 	{
 		const int	noFlags = 0;
 
 		int			result = ::send(target.m_handle,
+			reinterpret_cast<const char*>(data),
+			size, noFlags);
+
+		if (result == SOCKET_ERROR)
+			reportWSAError("::send", WSAGetLastError());
+
+		return result;
+	}
+
+	int Socket::send(const void* data, int size) const
+	{
+		const int	noFlags = 0;
+
+		int			result = ::send(m_handle,
 			reinterpret_cast<const char*>(data),
 			size, noFlags);
 
@@ -178,6 +192,20 @@ namespace net
 		const int	noFlags = 0;
 
 		int			bytesRecv = ::recv(m_handle,
+									   reinterpret_cast<char*>(buffer),
+									   size, noFlags);
+
+		if (bytesRecv == SOCKET_ERROR)
+			reportWSAError("::recv", WSAGetLastError());
+
+		return bytesRecv;
+	}
+
+	int Socket::receiveFrom(const Socket& socket, void* buffer, int size) const
+	{
+		const int	noFlags = 0;
+
+		int			bytesRecv = ::recv(socket.m_handle,
 									   reinterpret_cast<char*>(buffer),
 									   size, noFlags);
 
