@@ -23,12 +23,78 @@ namespace net
 		this->close();
 	}
 
+	int Socket::createClient(const std::string& ipAddress, const std::string& port)
+	{
+		IPData		connectionData
+		{
+			.m_ipString = ipAddress,
+			.m_ipAddress = inet_addr(ipAddress.c_str()),
+			.m_portNumber = convertPortNumber(port)
+		};
+
+		m_handle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+		if (m_handle == SocketParams::INVALID_HANDLE)
+		{
+			int		error = WSAGetLastError();
+			reportWSAError("::socket", error);
+
+			return error;
+		}
+
+		sockaddr_in		server;
+
+		server.sin_addr.s_addr = connectionData.m_ipAddress;
+		server.sin_family = AF_INET;
+		server.sin_port = htons(connectionData.m_portNumber);
+
+		consoleOutput("Client created. Connecting...\n");
+		displayLocalIP();
+
+		int		result = this->connect(&server);
+
+		if (result == NO_ERROR)
+			consoleOutput("Client connected successfully.\n");
+
+		return result;
+	}
+
+	int Socket::createServer(const std::string& port)
+	{
+		m_handle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+		if (m_handle == SocketParams::INVALID_HANDLE)
+		{
+			int		error = WSAGetLastError();
+			reportWSAError("::socket", error);
+
+			return error;
+		}
+
+		int				result;
+		sockaddr_in		server;
+
+		server.sin_addr.s_addr = INADDR_ANY;
+		server.sin_family = AF_INET;
+		server.sin_port = htons(convertPortNumber(port));
+
+		result = this->bind(&server);
+
+		if (result)
+			return result;
+
+		result = this->listen();
+
+		displayLocalIP();
+
+		return result;
+
+	}
+
+
 	int Socket::create(const std::string& hostname,
 		const std::string& port, bool server)
 	{
-
-		reportWSAError("Socket::create", 1234);
-
 		int			result;
 		IPData		connectionData
 		{
@@ -36,7 +102,7 @@ namespace net
 			.m_ipAddress = inet_addr(hostname.c_str())
 		};
 
-		if (isalpha(hostname[0]))
+		if (isdigit(port[0]))
 			connectionData.m_portNumber = (unsigned short)atoi(port.c_str());
 
 		else
@@ -66,8 +132,8 @@ namespace net
 		Handle_t			acceptedSocket;
 		sockaddr_storage	incomingAddr;
 
-		char				addressString[INET6_ADDRSTRLEN];
-		unsigned long		bufferLength = INET6_ADDRSTRLEN;
+		char				addressString[INET_ADDRSTRLEN];
+		unsigned long		bufferLength = INET_ADDRSTRLEN;
 
 		int					addrLength = sizeof incomingAddr;
 
@@ -80,7 +146,9 @@ namespace net
 
 		else
 		{
-			WSAAddressToString(reinterpret_cast<sockaddr*>(&incomingAddr),
+			addrLength = sizeof incomingAddr;
+
+			WSAAddressToStringA(reinterpret_cast<sockaddr*>(&incomingAddr),
 				addrLength, nullptr, addressString, &bufferLength);
 
 			consoleOutput("Connection received from: %1\n", addressString);
@@ -136,6 +204,16 @@ namespace net
 	}
 
 
+	int Socket::shutdown(void) const
+	{
+		int result = ::shutdown(m_handle, SD_BOTH);
+
+		if (result != NO_ERROR)
+			reportWSAError("::shutdown", WSAGetLastError());
+
+		return result;
+	}
+
 	int Socket::close() const
 	{
 		int		result = ::closesocket(m_handle);
@@ -148,7 +226,7 @@ namespace net
 
 	int Socket::listen(void) const
 	{
-		int		result = ::listen(m_handle, m_pendingConnectionCap);
+		int		result = ::listen(m_handle, SOMAXCONN);
 
 		if (result != NO_ERROR)
 			reportWSAError("::listen", WSAGetLastError());
@@ -161,7 +239,7 @@ namespace net
 		int			result;
 		sockaddr*	server = static_cast<sockaddr*>(addrData);
 
-		result = ::bind(m_handle, server, sizeof * server);
+		result = ::bind(m_handle, server, sizeof *server);
 
 		if (result != NO_ERROR)
 		{
@@ -283,16 +361,57 @@ namespace net
 
 	void Socket::displayLocalIP()
 	{
-		char		stringBuf[INET6_ADDRSTRLEN];
-		char*		ip;
-		hostent*	hostEntry;
+		char		stringBuf[NI_MAXHOST];
+		addrinfo*	result;
 
-		gethostname(stringBuf, INET6_ADDRSTRLEN);
-		hostEntry = gethostbyname(stringBuf);
-		ip = inet_ntoa(*(reinterpret_cast<in_addr*>(hostEntry->h_addr_list[0])));
+		int error = gethostname(stringBuf, NI_MAXHOST);
 
-		consoleOutput("Local address: %1\n", ip);
+		if (error != NO_ERROR)
+			reportWSAError("gethostname", WSAGetLastError());
+
+		// Dynamically allocated
+		 getaddrinfo(stringBuf, nullptr, nullptr, &result);
+
+		if (error != NO_ERROR)
+			reportWSAError("getaddrinfo", error);
+
+
+		unsigned long size = static_cast<int>(sizeof stringBuf);
+
+		for (addrinfo* pointer = result; pointer != nullptr; pointer = pointer->ai_next)
+		{
+			error = WSAAddressToStringA(pointer->ai_addr,
+										(unsigned int) pointer->ai_addrlen,
+										nullptr, stringBuf, &size);
+
+			if (error != NO_ERROR)
+			{
+				reportWSAError("WSAAddressToString", WSAGetLastError());
+				__debugbreak();
+			}
+
+			consoleOutput("Local address: %1\n", stringBuf);
+			size = static_cast<int>(sizeof stringBuf);
+		}
+
+		consoleOutput("Socket handle: %1!llu!\n", m_handle);
+		freeaddrinfo(result);
 	}
+
+	Socket::Port_t Socket::convertPortNumber(const std::string& portString)
+	{
+		if (isdigit(portString[0]))
+			return static_cast<Port_t>(atoi(portString.c_str()));
+
+		else
+		{
+			servent* servEntry = getservbyname(portString.c_str(), nullptr);
+
+			return ntohs(servEntry->s_port);
+		}
+	}
+
+
 
 	int Socket::connect(void* addrData) const
 	{
