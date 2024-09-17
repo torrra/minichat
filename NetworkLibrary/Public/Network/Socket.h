@@ -14,6 +14,7 @@ namespace net
 	private:
 
 		using Handle_t = unsigned long long;
+		using Port_t = unsigned short;
 
 		enum SocketParams : Handle_t
 		{
@@ -28,12 +29,15 @@ namespace net
 
 					~Socket(void);
 
-		int			create(const std::string& hostname,
-						   const std::string& port, bool server = false);
+		int			createClient(const std::string& ipAddress,
+								 const std::string& port);
+
+		int			createServer(const std::string& port);
+
+		int			shutdown(void)											const;
 		int			close(void)												const;
 
-
-		Socket		accept(/*IPData& incomingData*/)						const;
+		Socket		accept(void)											const;
 
 		int			send(const Socket& socket,
 						 const void* data, int size)						const;
@@ -48,6 +52,9 @@ namespace net
 
 	private:
 
+		int			create(const std::string& hostname,
+						   const std::string& port, bool server = false);
+
 		int			connect(void* addrData)									const;
 
 		int			bind(void* addrData)									const;
@@ -60,6 +67,8 @@ namespace net
 		int			initServerSocket(void* addrData);
 
 		void		displayLocalIP();
+
+		Port_t      convertPortNumber(const std::string& portString);
 
 		Handle_t	m_handle = SocketParams::INVALID_HANDLE;
 
