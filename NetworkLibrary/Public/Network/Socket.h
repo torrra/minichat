@@ -2,8 +2,9 @@
 
 #include <string>
 
-#include "Constants.h"
-//#include "IPData.h"
+#ifndef NET_DEFAULT_PORT
+#define NET_DEFAULT_PORT 	"8888"
+#endif
 
 namespace net
 {
@@ -11,9 +12,11 @@ namespace net
 
 	class Socket
 	{
+	public:
+		using Handle_t = unsigned long long;
+
 	private:
 
-		using Handle_t = unsigned long long;
 		using Port_t = unsigned short;
 
 		enum SocketParams : Handle_t
@@ -51,7 +54,7 @@ namespace net
 
 		Handle_t	getHandle()												const;
 
-					operator bool(void)										const;
+		bool		isValid(void)										const;
 
 		static int& connectionBackLog();
 

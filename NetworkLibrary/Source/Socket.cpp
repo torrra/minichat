@@ -20,18 +20,10 @@ namespace net
 
 	Socket::~Socket(void)
 	{
-		this->close();
 	}
 
 	int Socket::createClient(const std::string& ipAddress, const std::string& port)
 	{
-		IPData		connectionData
-		{
-			.m_ipString = ipAddress,
-			.m_ipAddress = inet_addr(ipAddress.c_str()),
-			.m_portNumber = convertPortNumber(port)
-		};
-
 		m_handle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 		if (m_handle == SocketParams::INVALID_HANDLE)
@@ -44,9 +36,9 @@ namespace net
 
 		sockaddr_in		server;
 
-		server.sin_addr.s_addr = connectionData.m_ipAddress;
+		server.sin_addr.s_addr = inet_addr(ipAddress.c_str());
 		server.sin_family = AF_INET;
-		server.sin_port = htons(connectionData.m_portNumber);
+		server.sin_port = htons(convertPortNumber(port));
 
 		consoleOutput("Client created. Connecting...\n");
 		displayLocalIP();
@@ -221,7 +213,7 @@ namespace net
 	}
 
 
-	Socket::operator bool(void) const
+	bool Socket::isValid(void) const
 	{
 		return m_handle != SocketParams::INVALID_HANDLE;
 	}
