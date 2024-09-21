@@ -1,6 +1,7 @@
 #include "Socket.h"
 #include "IPData.h"
 #include "ErrorHandling.h"
+#include "ConsoleOutput.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -29,24 +30,34 @@ namespace net
 		if (m_handle == SocketParams::INVALID_HANDLE)
 		{
 			int		error = WSAGetLastError();
-			reportWSAError("::socket", error);
+			reportWindowsError("::socket", error);
 
 			return error;
 		}
 
+		// server to connect to
 		sockaddr_in		server;
+		int				result;
+		unsigned long	optionEnabled = 1ul;
 
+		// what address and port this client will connect to
 		server.sin_addr.s_addr = inet_addr(ipAddress.c_str());
 		server.sin_family = AF_INET;
 		server.sin_port = htons(convertPortNumber(port));
 
-		consoleOutput("Client created. Connecting...\n");
-		displayLocalIP();
-
-		int		result = this->connect(&server);
+		consoleOutput("Connecting...\n");
+		result = this->connect(&server);
 
 		if (result == NO_ERROR)
-			consoleOutput("Client connected successfully.\n");
+		{
+			consoleOutput("Client connected successfully.\n\n");
+
+			// enable nonblocking mode after connection
+			result = ioctlsocket(m_handle, FIONBIO, &optionEnabled);
+
+			if (result == SOCKET_ERROR)
+				reportWindowsError("ioctlsocket", WSAGetLastError());
+		}
 
 		return result;
 	}
@@ -58,17 +69,21 @@ namespace net
 		if (m_handle == SocketParams::INVALID_HANDLE)
 		{
 			int		error = WSAGetLastError();
-			reportWSAError("::socket", error);
+			reportWindowsError("::socket", error);
 
 			return error;
 		}
 
 		int				result;
 		sockaddr_in		server;
+		unsigned long	optionEnabled = 0ul;
 
 		server.sin_addr.s_addr = INADDR_ANY;
 		server.sin_family = AF_INET;
 		server.sin_port = htons(convertPortNumber(port));
+
+		result = setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
+							(const char*)&optionEnabled, sizeof optionEnabled);
 
 		result = this->bind(&server);
 
@@ -76,9 +91,13 @@ namespace net
 			return result;
 
 		result = this->listen();
+		optionEnabled = 1ul;
+		result = ioctlsocket(m_handle, FIONBIO, &optionEnabled);
+
+		if (result == SOCKET_ERROR)
+			reportWindowsError("ioctlsocket", WSAGetLastError());
 
 		displayLocalIP();
-
 		return result;
 
 	}
@@ -124,8 +143,8 @@ namespace net
 		Handle_t			acceptedSocket;
 		sockaddr_storage	incomingAddr;
 
-		char				addressString[INET_ADDRSTRLEN];
-		unsigned long		bufferLength = INET_ADDRSTRLEN;
+		char				addressString[INET6_ADDRSTRLEN];
+		unsigned long		bufferLength = INET6_ADDRSTRLEN;
 
 		int					addrLength = sizeof incomingAddr;
 
@@ -134,7 +153,7 @@ namespace net
 			&addrLength);
 
 		if (acceptedSocket == SocketParams::INVALID_HANDLE)
-			reportWSAError("Socket::accept", SOCKET_ERROR);
+			reportWindowsError("Socket::accept", SOCKET_ERROR);
 
 		else
 		{
@@ -151,6 +170,22 @@ namespace net
 
 	}
 
+
+	void* Socket::createServerEvent(void) const
+	{
+		void*	eventHandle = WSACreateEvent();
+
+		if (!eventHandle)
+			reportWindowsError("WSACreateEvent", WSAGetLastError());
+
+		int		result = WSAEventSelect(m_handle, eventHandle, FD_READ);
+
+		if (result == SOCKET_ERROR)
+			reportWindowsError("WSAEventSelect", WSAGetLastError());
+
+		return eventHandle;
+	}
+
 	int Socket::sendTo(const Socket& target, const void* data, int size) const
 	{
 		const int	noFlags = 0;
@@ -160,7 +195,7 @@ namespace net
 			size, noFlags);
 
 		if (result == SOCKET_ERROR)
-			reportWSAError("::send", WSAGetLastError());
+			reportWindowsError("::send", WSAGetLastError());
 
 		return result;
 	}
@@ -174,7 +209,7 @@ namespace net
 			size, noFlags);
 
 		if (result == SOCKET_ERROR)
-			reportWSAError("::send", WSAGetLastError());
+			reportWindowsError("::send", WSAGetLastError());
 
 		return result;
 	}
@@ -188,7 +223,7 @@ namespace net
 									   size, noFlags);
 
 		if (bytesRecv == SOCKET_ERROR)
-			reportWSAError("::recv", WSAGetLastError());
+			reportWindowsError("::recv", WSAGetLastError());
 
 		return bytesRecv;
 	}
@@ -202,7 +237,7 @@ namespace net
 									   size, noFlags);
 
 		if (bytesRecv == SOCKET_ERROR)
-			reportWSAError("::recv", WSAGetLastError());
+			reportWindowsError("::recv", WSAGetLastError());
 
 		return bytesRecv;
 	}
@@ -218,6 +253,16 @@ namespace net
 		return m_handle != SocketParams::INVALID_HANDLE;
 	}
 
+	bool Socket::operator==(const Socket& rhs) const
+	{
+		return m_handle == rhs.m_handle;
+	}
+
+	bool Socket::operator!=(const Socket& rhs) const
+	{
+		return !(*this == rhs);
+	}
+
 	int& Socket::connectionBackLog()
 	{
 		return m_pendingConnectionCap;
@@ -229,7 +274,7 @@ namespace net
 		int result = ::shutdown(m_handle, SD_BOTH);
 
 		if (result != NO_ERROR)
-			reportWSAError("::shutdown", WSAGetLastError());
+			reportWindowsError("::shutdown", WSAGetLastError());
 
 		return result;
 	}
@@ -239,7 +284,7 @@ namespace net
 		int		result = ::closesocket(m_handle);
 
 		if (result != NO_ERROR)
-			reportWSAError("::close", WSAGetLastError());
+			reportWindowsError("::close", WSAGetLastError());
 
 		return result;
 	}
@@ -249,7 +294,7 @@ namespace net
 		int		result = ::listen(m_handle, SOMAXCONN);
 
 		if (result != NO_ERROR)
-			reportWSAError("::listen", WSAGetLastError());
+			reportWindowsError("::listen", WSAGetLastError());
 
 		return result;
 	}
@@ -263,7 +308,7 @@ namespace net
 
 		if (result != NO_ERROR)
 		{
-			reportWSAError("::bind", WSAGetLastError());
+			reportWindowsError("::bind", WSAGetLastError());
 			this->close();
 		}
 
@@ -289,7 +334,7 @@ namespace net
 
 			if (m_handle == SocketParams::INVALID_HANDLE)
 			{
-				reportWSAError("::socket", WSAGetLastError());;
+				reportWindowsError("::socket", WSAGetLastError());;
 				continue;
 			}
 
@@ -387,13 +432,13 @@ namespace net
 		int error = gethostname(stringBuf, NI_MAXHOST);
 
 		if (error != NO_ERROR)
-			reportWSAError("gethostname", WSAGetLastError());
+			reportWindowsError("gethostname", WSAGetLastError());
 
 		// Dynamically allocated
 		 getaddrinfo(stringBuf, nullptr, nullptr, &result);
 
 		if (error != NO_ERROR)
-			reportWSAError("getaddrinfo", error);
+			reportWindowsError("getaddrinfo", error);
 
 
 		unsigned long size = static_cast<int>(sizeof stringBuf);
@@ -406,7 +451,7 @@ namespace net
 
 			if (error != NO_ERROR)
 			{
-				reportWSAError("WSAAddressToString", WSAGetLastError());
+				reportWindowsError("WSAAddressToString", WSAGetLastError());
 				__debugbreak();
 			}
 
@@ -442,7 +487,7 @@ namespace net
 
 		if (result != NO_ERROR)
 		{
-			reportWSAError("::connect", WSAGetLastError());
+			reportWindowsError("::connect", WSAGetLastError());
 			this->close();
 		}
 
