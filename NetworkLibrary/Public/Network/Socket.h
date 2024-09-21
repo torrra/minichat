@@ -42,6 +42,8 @@ namespace net
 
 		Socket		accept(void)											const;
 
+		void*		createServerEvent(void)									const;
+
 		int			sendTo(const Socket& socket,
 						   const void* data, int size)						const;
 
@@ -54,7 +56,10 @@ namespace net
 
 		Handle_t	getHandle()												const;
 
-		bool		isValid(void)										const;
+		bool		isValid(void)											const;
+
+		bool		operator==(const Socket& rhs)							const;
+		bool		operator!=(const Socket& rhs)							const;
 
 		static int& connectionBackLog();
 
