@@ -24,7 +24,17 @@ namespace net
 
 	int Socket::createClient(const std::string& ipAddress, const std::string& port)
 	{
-		m_handle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		addrinfo	hints;
+		addrinfo* addrList;
+
+		memset(&hints, 0, sizeof hints);
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+
+		getaddrinfo(ipAddress.c_str(), port.c_str(), &hints, &addrList);
+
+		m_handle = ::socket(addrList->ai_family, addrList->ai_socktype, addrList->ai_protocol);
 
 		if (m_handle == SocketParams::INVALID_HANDLE)
 		{
@@ -35,23 +45,24 @@ namespace net
 		}
 
 		// server to connect to
-		sockaddr_in		server;
 		int				result;
-		unsigned long	optionEnabled = 1ul;
+		unsigned long	optionEnabled = 0ul;
 
-		// what address and port this client will connect to
-		server.sin_addr.s_addr = inet_addr(ipAddress.c_str());
-		server.sin_family = AF_INET;
-		server.sin_port = htons(convertPortNumber(port));
+		result = setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
+			(const char*)&optionEnabled, sizeof optionEnabled);
+
+		if (result == SOCKET_ERROR)
+			reportWindowsError("ioctlsocket", WSAGetLastError());
 
 		consoleOutput("Connecting...\n");
-		result = this->connect(&server);
+		result = ::connect(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
 
 		if (result == NO_ERROR)
 		{
 			consoleOutput("Client connected successfully.\n\n");
 
 			// enable nonblocking mode after connection
+			optionEnabled = 1ul;
 			result = ioctlsocket(m_handle, FIONBIO, &optionEnabled);
 
 			if (result == SOCKET_ERROR)
@@ -63,7 +74,17 @@ namespace net
 
 	int Socket::createServer(const std::string& port)
 	{
-		m_handle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		addrinfo	hints;
+		addrinfo*	addrList;
+
+		memset(&hints, 0, sizeof hints);
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+
+		getaddrinfo(nullptr, port.c_str(), &hints, &addrList);
+
+		m_handle = ::socket(addrList->ai_family, addrList->ai_socktype, addrList->ai_protocol);
 
 		if (m_handle == SocketParams::INVALID_HANDLE)
 		{
@@ -74,17 +95,14 @@ namespace net
 		}
 
 		int				result;
-		sockaddr_in		server;
 		unsigned long	optionEnabled = 0ul;
 
-		server.sin_addr.s_addr = INADDR_ANY;
-		server.sin_family = AF_INET;
-		server.sin_port = htons(convertPortNumber(port));
 
 		result = setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
 							(const char*)&optionEnabled, sizeof optionEnabled);
 
-		result = this->bind(&server);
+
+		result = ::bind(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
 
 		if (result)
 			return result;
@@ -97,6 +115,8 @@ namespace net
 			reportWindowsError("ioctlsocket", WSAGetLastError());
 
 		displayLocalIP();
+		freeaddrinfo(addrList);
+
 		return result;
 
 	}
@@ -262,12 +282,17 @@ namespace net
 		return result;
 	}
 
+	//void* Socket::initAddressInfo(const char* addressString) const
+	//{
+	//	return nullptr;
+	//}
+
 	int Socket::bind(void* addrData) const
 	{
 		int			result;
 		sockaddr*	server = static_cast<sockaddr*>(addrData);
 
-		result = ::bind(m_handle, server, sizeof *server);
+		result = ::bind(m_handle, server, sizeof sockaddr_in6);
 
 		if (result != NO_ERROR)
 		{
