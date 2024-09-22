@@ -65,19 +65,11 @@ namespace net
 
 	private:
 
-		int			create(const std::string& hostname,
-						   const std::string& port, bool server = false);
-
 		int			connect(void* addrData)									const;
 
 		int			bind(void* addrData)									const;
 		int			listen(void)											const;
 
-		int			createSocket(void* addrData);
-		void		initSocketHints(void* addrData, bool server)			const;
-
-		int			initClientSocket(void* addrData);
-		int			initServerSocket(void* addrData);
 
 		void		displayLocalIP();
 
