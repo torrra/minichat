@@ -11,6 +11,7 @@
 #include "Platform.h"
 #include "Socket.h"
 #include "ErrorHandling.h"
+#include "ConsoleOutput.h"
 
 void network(void)
 {
@@ -32,7 +33,7 @@ namespace net
 
         if (error)
 	    {
-			reportWSAError("WSAStartup", error);
+			reportWindowsError("WSAStartup", error);
 			return error;
 		}
 
@@ -46,7 +47,7 @@ namespace net
 
 		if (SOCKET_ERROR == error)
 		{
-            reportWSAError("WSACleanup", error);
+            reportWindowsError("WSACleanup", error);
 			return error;
 		}
 
