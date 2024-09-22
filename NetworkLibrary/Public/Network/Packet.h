@@ -10,16 +10,16 @@
 
 namespace net
 {
-	// Size = 16B, padding = 0B
+	// Size = 528B, padding = 0B
 
 	class Packet
 	{
 	private:
 						Packet(void) = default;
 	public:
-						Packet(void* buffer, size_t size, const Socket& sender);
+						Packet(const void* buffer, size_t size, const Socket& sender);
 						~Packet(void) = default;
-		bool			append(void* buffer, size_t size);
+		bool			append(const void* buffer, size_t size);
 		size_t			getSize(void)							const;
 
 		const char*		getData(void)							const;
@@ -33,7 +33,7 @@ namespace net
 
 	private:
 		char		m_buffer[NET_MAX_PACKET_SIZE];
-		size_t		m_bufferSize	= 0ull;
+		size_t		m_size	= 0ull;
 		Socket		m_sender;
 
 	};

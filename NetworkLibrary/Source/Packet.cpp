@@ -5,8 +5,8 @@
 
 namespace net
 {
-	Packet::Packet(void* buffer, size_t size, const Socket& sender)
-		: m_bufferSize(size), m_sender(sender)
+	Packet::Packet(const void* buffer, size_t size, const Socket& sender)
+		: m_size(size), m_sender(sender)
 	{
 		if (size <= NET_MAX_PACKET_SIZE)
 			memcpy(m_buffer, buffer, size);
@@ -14,14 +14,16 @@ namespace net
 		{
 			consoleOutput("Packet error: not enough buffer space\n");
 			memset(m_buffer, 0, sizeof m_buffer);
+			m_size = 0;
 		}
 	}
 
-	bool Packet::append(void* buffer, size_t size)
+	bool Packet::append(const void* buffer, size_t size)
 	{
-		if (size <= NET_MAX_PACKET_SIZE)
+		if (m_size + size <= NET_MAX_PACKET_SIZE)
 		{
-			memcpy(m_buffer, buffer, size);
+			memcpy(m_buffer + m_size, buffer, size);
+			m_size += size;
 			return true;
 		}
 		else
@@ -33,7 +35,7 @@ namespace net
 
 	size_t Packet::getSize(void) const
 	{
-		return m_bufferSize;
+		return m_size;
 	}
 
 	const char* Packet::getData(void) const
