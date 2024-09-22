@@ -1,19 +1,13 @@
 #include <Network/Network.h>
 #include <Network/Packet.h>
-
-#include "ServerApp.h"
+#include <Network/Server.h>
 
 #include <iostream>
 
 int main(void)
 {
-
 	int errorStartup = net::startup();
     bool running = true;
-	network();
-
-
-    //net::Server server;
 
     net::Server server;
 
