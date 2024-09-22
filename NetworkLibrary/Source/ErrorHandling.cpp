@@ -13,7 +13,6 @@
 #include <cstdarg>
 
 #include "ErrorHandling.h"
-#include "Constants.h"
 #include "ConsoleOutput.h"
 
 
