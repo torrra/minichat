@@ -202,12 +202,14 @@ namespace client
         if (m_input.empty())
             return;
 
-        std::string message = m_name;
+        net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
 
-        message += " > ";
-        message += m_input;
-        message += "\r\n\r\n";
+        message.append(" > ", 3ull);
 
-        m_socket.send(message.c_str(), static_cast<int>(message.size()));
+        if (!message.append(m_input.c_str(), m_input.size()))
+            net::consoleOutput("\nMessage too long.\n");
+
+        message.append("\r\n\r\n", 4ull);
+        m_socket.send(message.getData(), static_cast<int>(message.getSize()));
     }
 }
