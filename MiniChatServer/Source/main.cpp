@@ -1,49 +1,38 @@
 #include <Network/Network.h>
-#include <Network/Server.h>
+#include <Network/Packet.h>
 
-#include <WinSock2.h>
+#include "ServerApp.h"
+
 #include <iostream>
 
 int main(void)
 {
 
 	int errorStartup = net::startup();
-
+    bool running = true;
 	network();
-	 //SOCKET* a = (SOCKET*) nlib::createSocket("127.0.0.1", "doom", false);
 
-	//nlib::
 
-	// (void)errorStartup;
-	//(void)a;
+    //net::Server server;
 
-    net::Socket server, client;
+    net::Server server;
 
-    //server.create("0.0.0.0", "8888", true);
+    while(running)
+    {
+       server.serverUpdate();
 
-    server.createServer("8888");
+       auto packets = server.receiveAllPackets();
 
-    bool debug = true;
+       for (const net::Packet& received : packets)
+       {
+           std::cout << net::Packet::unpackMessage(received) << '\n';
 
-    char receivedData[12];
+           server.addPacket(received);
+       }
 
-     net::Socket accepted = server.accept();
+       server.sendAllPackets();
 
-     auto handle = server;
-
-     if (accepted)
-     {
-         //std::cout << server.getHandle() << '\n';
-
-         //server.send(accepted, (void*)(unsigned long long) server.getHandle(), sizeof(void*));
-         server.send(accepted, "Hello\0", 6);
-         //server.receive(receivedData, 12);
-         //recvfrom()
-
-         recv(accepted.getHandle(), receivedData, sizeof receivedData, 0);
-     }
-
-     while (debug);
+    }
 
 	net::cleanup();
 
