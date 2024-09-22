@@ -5,59 +5,125 @@
 
 #include "Server.h"
 #include "ErrorHandling.h"
-//#include "FileDescriptor.h"
+#include "ConsoleOutput.h"
 
 namespace net
 {
 
     Server::Server(void)
     {
+        initConsole();
         m_socket.createServer(NET_DEFAULT_PORT);
 
-        //memset(&m_clients, 0, sizeof m_clients);
-
-        FD_ZERO(&m_clients);
-        FD_SET(m_socket.getHandle(), &m_clients);
+        m_clients.push_back(
+        {
+            .m_socket = m_socket.getHandle(),
+            .m_requestedEvents = POLLRDNORM,
+            .m_returnedEvents = 0
+        });
     }
 
-    ServerPollData Server::serverUpdate(void)
+    Server::~Server(void)
     {
-        fd_set          fdCopy = (*reinterpret_cast<fd_set*>(&m_clients));
-        TIMEVAL         timeout = { .tv_sec = 0l, .tv_usec = 1000l };
-        ServerPollData  polledData
+        for (SocketEvent client : m_clients)
         {
-            .m_socket = this->m_socket.getHandle(),
-            .m_status = NONE
-        };
+            Socket clientSock(client.m_socket);
 
-        int         selectedCount = select(0, &fdCopy, nullptr, nullptr, &timeout);
-
-        if (selectedCount == SOCKET_ERROR)
-            reportWSAError("::select", WSAGetLastError());
-
-        for (int socketNum = 0; socketNum < selectedCount; ++socketNum)
-        {
-            SOCKET incoming = fdCopy.fd_array[socketNum];
-
-            if (incoming == m_socket.getHandle())
-            {
-                polledData.m_status = NEW_CONNECTION;
-                polledData.m_socket = acceptConnection().getHandle();
-            }
-            else
-            {
-                polledData.m_status = NEW_DATA;
-                polledData.m_socket = incoming;
-            }
+            clientSock.shutdown();
+            clientSock.close();
         }
 
-        return polledData;
+        m_socket.shutdown();
+        m_socket.close();
+    }
+
+    int Server::serverUpdate(void)
+    {
+        std::vector<SocketEvent>    clientCopy = m_clients;
+        pollfd*                     copiedData = (pollfd*) clientCopy.data();
+        int                         timeoutMs = 100;
+
+        int result = WSAPoll(copiedData,
+                             static_cast<int>(clientCopy.size()),
+                             timeoutMs);
+
+        if (result == SOCKET_ERROR)
+            reportWindowsError("WSAPoll", WSAGetLastError());
+
+        else
+        {
+           checkListener(clientCopy[0]);
+           checkClients(clientCopy);
+        }
+
+        return result;
     }
 
     Socket Server::getSocket(void) const
     {
         return m_socket;
     }
+
+    const std::vector<Socket>& Server::getIncoming() const
+    {
+        return m_incomingQueue;
+    }
+
+    const std::vector<Socket>& Server::getOutgoing() const
+    {
+        return m_outgoingQueue;
+    }
+
+    std::vector<Packet> Server::receiveAllPackets(void)
+    {
+        std::vector<Packet>     receivedPackets;
+        char                    receiveBuffer[NET_MAX_PACKET_SIZE];
+        size_t                  size;
+
+
+        for (const Socket& client : m_incomingQueue)
+        {
+            memset(receiveBuffer, 0, sizeof receiveBuffer);
+
+            m_socket.receiveFrom(client, receiveBuffer, sizeof receiveBuffer);
+            size = Packet::findPacketSize(receiveBuffer);
+
+            receivedPackets.emplace_back(receiveBuffer, size, client.getHandle());
+        }
+
+        m_incomingQueue.clear();
+        return receivedPackets;
+    }
+
+    void Server::sendAllPackets(void)
+    {
+        for (const Socket& client : m_outgoingQueue)
+        {
+            for (const Packet& packet : m_outgoingPackets)
+            {
+                if (packet.getSender() == client)
+                    continue;
+
+                m_socket.sendTo(client, packet.getData(),
+                                static_cast<int>(packet.getSize()));
+
+            }
+        }
+
+        m_outgoingPackets.clear();
+        m_outgoingQueue.clear();
+    }
+
+    Packet& Server::createPacket(void* data, size_t size)
+    {
+        return m_outgoingPackets.emplace_back(data, size, m_socket);
+    }
+
+    void Server::addPacket(const Packet& packet)
+    {
+        m_outgoingPackets.push_back(packet);
+    }
+
 
 
     Socket Server::acceptConnection(void)
@@ -70,11 +136,73 @@ namespace net
         if (!accepted.isValid())
             return Socket(INVALID_SOCKET);
 
-        FD_SET(accepted.getHandle(), &m_clients);
         m_socket.sendTo(accepted, connectionMessage.c_str(), stringSize);
 
         return accepted;
     }
 
+    Socket Server::checkListener(const SocketEvent& listener)
+    {
+        if (!(listener.m_returnedEvents & POLLRDNORM))
+            return Socket(INVALID_SOCKET);
+
+
+        Socket  accepted = m_socket.accept();
+
+        if (accepted.getHandle() == INVALID_SOCKET)
+            return accepted;
+
+        m_clients.push_back(
+        {
+            .m_socket = accepted.getHandle(),
+            .m_requestedEvents = POLLRDNORM,
+            .m_returnedEvents = 0
+        });
+
+        return accepted;
+    }
+
+    void Server::checkClients(std::vector<SocketEvent>& clients)
+    {
+        m_incomingQueue.clear();
+        m_outgoingQueue.clear();
+
+        for (size_t index = clients.size() - 1ull; index > 0ull; --index)
+        {
+            SocketEvent&    clientEvents = clients[index];
+
+            if (checkInvalidEvents(clientEvents.m_returnedEvents))
+            {
+                Socket toClose(clientEvents.m_socket);
+
+                toClose.shutdown();
+                toClose.close();
+
+                m_clients.erase(m_clients.begin() + index);
+                continue;
+            }
+
+            if (clientEvents.m_returnedEvents & POLLRDNORM)
+                m_incomingQueue.emplace_back(clientEvents.m_socket);
+
+            //if (clientEvents.m_returnedEvents & POLLWRNORM)
+            m_outgoingQueue.emplace_back(clientEvents.m_socket);
+
+        }
+    }
+
+    bool Server::checkInvalidEvents(short events)
+    {
+        if (events & POLLERR)
+            return true;
+
+        if (events & POLLHUP)
+            return true;
+
+        if (events & POLLNVAL)
+            return true;
+
+        return false;
+    }
 
 }
