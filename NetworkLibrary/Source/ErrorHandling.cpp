@@ -14,12 +14,13 @@
 
 #include "ErrorHandling.h"
 #include "Constants.h"
+#include "ConsoleOutput.h"
 
 
 namespace net
 {
 
-	void reportWSAError(const char* context, int error)
+	void reportWindowsError(const char* context, int error)
 	{
 		LPSTR	buffer;
 		int		formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -45,62 +46,4 @@ namespace net
 		}
 
 	}
-
-
-	void consoleOutput(const char* format, ...)
-	{
-		LPTSTR		buffer;
-		va_list		args;
-		int			formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_STRING;
-
-		va_start(args, format);
-
-		int		charCount = FormatMessageA(formatFlags, (LPTSTR)format, 0,
-			GetUserDefaultLangID(),
-			(LPTSTR)&buffer, 0, &args);
-
-		if (charCount)
-		{
-			void* handle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-			if (!WriteConsoleA(handle, buffer, charCount, nullptr, 0))
-			{
-				int		error = GetLastError();
-
-				OutputDebugStringA("WriteConsole format failure\n");
-				(void)error;
-
-			}
-
-			LocalFree(buffer);
-
-		}
-		else
-		{
-			int		error = GetLastError();
-
-			OutputDebugStringA("FormatMessage format failure\n");
-			DebugBreak();
-			(void)error;
-		}
-
-
-	}
-
-	void initConsole()
-	{
-		int		dwCodePage;
-		int		localeFlags = LOCALE_IDEFAULTANSICODEPAGE | LOCALE_RETURN_NUMBER;
-		int		success = GetLocaleInfoEx(L"Fr-FR", localeFlags,
-			(LPWSTR)&dwCodePage,
-			sizeof dwCodePage / sizeof WCHAR);
-
-		if (success)
-			SetConsoleOutputCP(dwCodePage);
-		else
-			reportWSAError("initConsole", GetLastError());
-	}
-
-
 }
