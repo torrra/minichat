@@ -10,6 +10,8 @@
 
 namespace net
 {
+    // size = 104B, padding = 4B between count and sockets
+
     // used for select function
     struct FileDescriptorSet
     {
@@ -18,8 +20,11 @@ namespace net
         Socket::Handle_t       m_sockets[NET_MAX_SOCKETS];
     };
 
+
+    // size = 16B, padding = 4B
+
     // used for WSAPoll function
-    struct PollData
+    struct SocketEvent
     {
         // same memory layout as pollfd struct
         Socket::Handle_t        m_socket;
