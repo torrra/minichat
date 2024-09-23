@@ -19,7 +19,7 @@ int main(void)
 
        for (const net::Packet& received : packets)
        {
-           std::cout << net::Packet::unpackMessage(received) << '\n';
+           std::cout << net::Packet::unpackMessage(received);
 
            server.addPacket(received);
        }
