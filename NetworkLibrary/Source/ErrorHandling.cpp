@@ -1,13 +1,3 @@
-#ifdef UNICODE
-#undef UNICODE
-#undef _UNICODE
-#endif // UNICODE
-
-#if 0
-#define UNICODE
-#define _UNICODE
-#endif
-
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <cstdarg>
@@ -21,13 +11,13 @@ namespace net
 
 	void reportWindowsError(const char* context, int error)
 	{
-		LPSTR	buffer;
+		char*	buffer;
 		int		formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
 							  FORMAT_MESSAGE_FROM_SYSTEM |
 						      FORMAT_MESSAGE_IGNORE_INSERTS;
 
 	    int		charCount = FormatMessageA(formatFlags, nullptr, error, GetUserDefaultLangID(),
-										  (LPSTR) &buffer, 0, nullptr);
+										  (char*) &buffer, 0, nullptr);
 
 		if (charCount)
 		{
@@ -40,8 +30,6 @@ namespace net
 
 			OutputDebugStringA("FormatMessage error");
 			DebugBreak();
-			(void)formatFailure;
-
 		}
 
 	}
