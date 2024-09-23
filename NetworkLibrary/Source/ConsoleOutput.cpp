@@ -9,16 +9,16 @@ namespace net
     void consoleOutput(const char* format, ...)
 	{
 		int			dwCodepage = 0;
-		LPSTR		buffer;
+		char*		buffer;
 		va_list		args;
 		int			formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
 								  FORMAT_MESSAGE_FROM_STRING;
 
 		va_start(args, format);
 
-		int		charCount = FormatMessageA(formatFlags, (LPSTR)format, 0,
-			dwCodepage,
-			(LPSTR)&buffer, 0, &args);
+		int		charCount = FormatMessageA(formatFlags, (char*)format, 0,
+										   dwCodepage,
+										   (char*)&buffer, 0, &args);
 
 		if (charCount)
 		{
