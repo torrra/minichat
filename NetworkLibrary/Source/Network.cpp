@@ -7,20 +7,22 @@
 #include "ErrorHandling.h"
 #include "ConsoleOutput.h"
 
+#define WSA_MAJOR_VER   2
+#define WSA_MINOR_VER   2
 
 namespace net
 {
 
     int startup(void)
     {
-        WSADATA startupData;
-        int	    error = WSAStartup(
-                MAKEWORD(2, 2),
-                &startupData
-        );
+        // Start up WinSock2 API
+        WSADATA     startupData;
+        int	        error = WSAStartup(MAKEWORD(WSA_MAJOR_VER, WSA_MINOR_VER),
+                                        &startupData);
 
         if (error)
 	    {
+            // Display error on failure
 			reportWindowsError("WSAStartup", error);
 			return error;
 		}
@@ -31,10 +33,12 @@ namespace net
 
     int cleanup(void)
     {
-		int error = WSACleanup();
+        // Cleanup WinSock2
+		int     error = WSACleanup();
 
 		if (SOCKET_ERROR == error)
 		{
+            // Display error on failure
             reportWindowsError("WSACleanup", error);
 			return error;
 		}
