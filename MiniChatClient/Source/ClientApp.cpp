@@ -144,7 +144,7 @@ namespace client
             return;
         }
 
-        // Tell server new client has succesfully joined
+        // Tell server new client has successfully joined
         else
         {
             m_name = m_input;

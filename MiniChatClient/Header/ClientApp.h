@@ -34,7 +34,7 @@ namespace client
         ClientEvent     processUserInput(void);
         std::string     receiveMessage(void);
 
-        void     sendMessage(void);
+        void            sendMessage(void);
 
         net::Socket     m_socket;
         std::string     m_name;
