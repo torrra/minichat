@@ -82,7 +82,7 @@ namespace net
 		size_t  count = 0ull;
 		char    data = packetBuffer[0];
 
-		while (data)
+		while (data && count < NET_MAX_PACKET_SIZE)
 		{
 			++count;
 			data = packetBuffer[count];
