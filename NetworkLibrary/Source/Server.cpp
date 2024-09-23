@@ -142,6 +142,7 @@ namespace net
         if (accepted.getHandle() == INVALID_SOCKET)
             return accepted;
 
+        // Add newly accepted client to client list
         m_clients.push_back(
         {
             .m_socket = accepted.getHandle(),
@@ -157,13 +158,15 @@ namespace net
         m_incomingQueue.clear();
         m_outgoingQueue.clear();
 
+        // Read all objects in client array except listening socket (index 0)
         for (size_t index = clients.size() - 1ull; index > 0ull; --index)
         {
             SocketEvent&    clientEvents = clients[index];
 
+            // Terminate connection in socket is invalid
             if (checkInvalidEvents(clientEvents.m_returnedEvents))
             {
-                Socket toClose(clientEvents.m_socket);
+                Socket     toClose(clientEvents.m_socket);
 
                 toClose.shutdown();
                 toClose.close();
@@ -172,6 +175,8 @@ namespace net
                 continue;
             }
 
+            // Add to sockets to receive from if it has sent data
+            // over to server
             if (clientEvents.m_returnedEvents & POLLRDNORM)
                 m_incomingQueue.emplace_back(clientEvents.m_socket);
 
@@ -182,6 +187,8 @@ namespace net
 
     bool Server::checkInvalidEvents(short events)
     {
+        // Check if any invalid flags was set
+
         if (events & POLLERR)
             return true;
 
