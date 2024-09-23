@@ -10,8 +10,6 @@
 
 namespace net
 {
-    // size = 104B, padding = 4B between count and sockets
-
     // used for select function
     struct FileDescriptorSet
     {
@@ -21,9 +19,7 @@ namespace net
     };
 
 
-    // size = 16B, padding = 4B
-
-    // used for WSAPoll function
+    // pollfd placeholder used for WSAPoll function
     struct SocketEvent
     {
         // same memory layout as pollfd struct
