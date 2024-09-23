@@ -12,7 +12,7 @@ namespace net
 		LPSTR		buffer;
 		va_list		args;
 		int			formatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_STRING;
+								  FORMAT_MESSAGE_FROM_STRING;
 
 		va_start(args, format);
 
@@ -57,7 +57,10 @@ namespace net
 			sizeof dwCodePage / sizeof WCHAR);
 
 		if (success)
+		{
 			SetConsoleOutputCP(dwCodePage);
+			SetConsoleCP(dwCodePage);
+		}
 		else
 			reportWindowsError("initConsole", GetLastError());
 	}
