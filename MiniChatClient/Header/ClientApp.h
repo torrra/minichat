@@ -22,7 +22,7 @@ namespace client
                 ~ClientApp(void);
 
         void     welcomeMessage(void);
-        void     update(void);
+        void     update(bool& running);
 
     private:
 

@@ -24,10 +24,10 @@ namespace client
         net::consoleOutput("Enter server IP address: ");
     }
 
-    void ClientApp::update(void)
+    void ClientApp::update(bool& running)
     {
         ClientEvent clientEvent = waitForMessages();
-
+        (void)running;
 
         switch (clientEvent)
         {
