@@ -9,6 +9,10 @@ namespace client
     class ClientApp
     {
     private:
+
+        // client event value obtained from event polling
+        // IN_ prefix: input event
+        // SERV_ prefix: server event
         enum ClientEvent
         {
             NO_EVENT,
@@ -21,25 +25,51 @@ namespace client
                 ClientApp(void) = default;
                 ~ClientApp(void);
 
+        // Ask user for server IP address
         void     welcomeMessage(void);
+
+        // Poll events and handle messages
         void     update(bool& running);
 
     private:
 
-        void            attemptToConnect(void);
-        void            resetConsoleLine(void);
-        ClientEvent     waitForMessages(void);
-        void            displayUserInput(void);
-        void            registerUsername(void);
-        ClientEvent     processUserInput(void);
-        std::string     receiveMessage(void);
+        // Connect to server
 
+        void            attemptToConnect(void);
+        void            registerUsername(void);
+
+        // Move user input when receiving a message
+
+        void            resetConsoleLine(void);
+        void            displayUserInput(void);
+
+
+        // Wait for input or server event
+        ClientEvent     waitForMessages(void);
+
+        // Read user input
+        ClientEvent     processUserInput(void);
+
+        // Message handling
+
+        std::string     receiveMessage(void);
         void            sendMessage(void);
 
+
+
+        // Client sockat handle
         net::Socket     m_socket;
+
+        // Username
         std::string     m_name;
+
+        // Current user input
         std::string     m_input;
+
+        // Server event for polling
         void*           m_serverEvent = nullptr;
+
+        // Is this client connected to a server ?
         bool            m_connected = false;
     };
 }
