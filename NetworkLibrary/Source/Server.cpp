@@ -12,9 +12,12 @@ namespace net
 
     Server::Server(void)
     {
+        // Set up console input/ouput codepage
         initConsole();
-        m_socket.createServer(NET_DEFAULT_PORT);
 
+        // create listening socket and add to client list
+        // (makes checking for updates easier)
+        m_socket.createServer(NET_DEFAULT_PORT);
         m_clients.push_back(
         {
             .m_socket = m_socket.getHandle(),
@@ -25,6 +28,7 @@ namespace net
 
     Server::~Server(void)
     {
+        // Terminate every connection
         for (SocketEvent client : m_clients)
         {
             Socket clientSock(client.m_socket);
@@ -43,6 +47,7 @@ namespace net
         pollfd*                     copiedData = (pollfd*) clientCopy.data();
         int                         timeoutMs = static_cast<int>(INFINITE);
 
+        // Check for events on listener and clients
         int result = WSAPoll(copiedData,
                              static_cast<int>(clientCopy.size()),
                              timeoutMs);
@@ -80,7 +85,7 @@ namespace net
         char                    receiveBuffer[NET_MAX_PACKET_SIZE];
         size_t                  size;
 
-
+        // Receive packet from all clients that have sent data
         for (const Socket& client : m_incomingQueue)
         {
             memset(receiveBuffer, 0, sizeof receiveBuffer);
@@ -97,10 +102,12 @@ namespace net
 
     void Server::sendAllPackets(void)
     {
+        // Send all messages to all available clients
         for (const Socket& client : m_outgoingQueue)
         {
             for (const Packet& packet : m_outgoingPackets)
             {
+                // Do not send message back to sender
                 if (packet.getSender() == client)
                     continue;
 
@@ -122,23 +129,6 @@ namespace net
     void Server::addPacket(const Packet& packet)
     {
         m_outgoingPackets.push_back(packet);
-    }
-
-
-
-    Socket Server::acceptConnection(void)
-    {
-        std::string     connectionMessage = "Successfully connected.\r\n";
-        int             stringSize = static_cast<int>(connectionMessage.size()) + 1;
-
-        Socket          accepted = m_socket.accept();
-
-        if (!accepted.isValid())
-            return Socket(INVALID_SOCKET);
-
-        m_socket.sendTo(accepted, connectionMessage.c_str(), stringSize);
-
-        return accepted;
     }
 
     Socket Server::checkListener(const SocketEvent& listener)
@@ -185,7 +175,6 @@ namespace net
             if (clientEvents.m_returnedEvents & POLLRDNORM)
                 m_incomingQueue.emplace_back(clientEvents.m_socket);
 
-            //if (clientEvents.m_returnedEvents & POLLWRNORM)
             m_outgoingQueue.emplace_back(clientEvents.m_socket);
 
         }

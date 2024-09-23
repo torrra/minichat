@@ -34,9 +34,6 @@ namespace net
 
     private:
 
-        // Accept incoming connection from client
-        Socket                  acceptConnection(void);
-
         // Check for incoming connections
         Socket                  checkListener(const SocketEvent& listener);
 
