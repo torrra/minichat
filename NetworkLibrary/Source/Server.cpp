@@ -41,7 +41,7 @@ namespace net
     {
         std::vector<SocketEvent>    clientCopy = m_clients;
         pollfd*                     copiedData = (pollfd*) clientCopy.data();
-        int                         timeoutMs = 100;
+        int                         timeoutMs = static_cast<int>(INFINITE);
 
         int result = WSAPoll(copiedData,
                              static_cast<int>(clientCopy.size()),
