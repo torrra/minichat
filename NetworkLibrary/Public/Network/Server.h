@@ -9,8 +9,6 @@
 
 namespace net
 {
-    // size = 104B, no padding
-
     class Server
     {
     public:
@@ -21,10 +19,6 @@ namespace net
                                 ~Server(void);
 
         int                     serverUpdate(void);
-        Socket                  getSocket(void)         const;
-
-        const SocketArray&      getIncoming()           const;
-        const SocketArray&      getOutgoing()           const;
 
         std::vector<Packet>     receiveAllPackets(void);
         void                    sendAllPackets(void);
@@ -32,20 +26,39 @@ namespace net
         Packet&                 createPacket(void* data, size_t size);
         void                    addPacket(const Packet& packet);
 
-        //IPData                  getLocalAddress(void);
+        // Accessors
+
+        Socket                  getSocket(void)         const;
+        const SocketArray&      getIncoming()           const;
+        const SocketArray&      getOutgoing()           const;
 
     private:
 
+        // Accept incoming connection from client
         Socket                  acceptConnection(void);
+
+        // Check for incoming connections
         Socket                  checkListener(const SocketEvent& listener);
+
+        // Check if connected clients sent data
         void                    checkClients(std::vector<SocketEvent>& clients);
+
+        // Check if a client is disconnected
         bool                    checkInvalidEvents(short events);
 
-
+        // Connected clients
         std::vector<SocketEvent>    m_clients;
+
+        // Client sockets that sent data to server
         std::vector<Socket>         m_incomingQueue;
+
+        // Client sockets that are able to receive next packet
         std::vector<Socket>         m_outgoingQueue;
+
+        // Next packet to be sent to clients
         std::vector<Packet>         m_outgoingPackets;
+
+        // Listening socket handle
         Socket                      m_socket;
     };
 }
