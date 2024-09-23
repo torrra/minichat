@@ -18,6 +18,7 @@ namespace client
 
     void ClientApp::welcomeMessage(void)
     {
+        // Set codepages
         net::initConsole();
         SetConsoleTitleA("Mini chat client");
         net::consoleOutput("Enter server IP address: ");
@@ -25,7 +26,6 @@ namespace client
 
     void ClientApp::update(void)
     {
-        //resetConsoleLine();
         ClientEvent clientEvent = waitForMessages();
 
 
@@ -33,18 +33,23 @@ namespace client
         {
         case IN_ENTER_PRESSED:
 
+            // Get server IP
             if (!m_connected)
                 attemptToConnect();
 
+            // get username if user just connected
             else if (m_name.empty())
                 registerUsername();
 
+            // send message
             else
                 sendMessage();
 
             m_input.clear();
             break;
 
+        // delete user input from console before displaying a
+        // new message and re-displaying it
         case SERV_RECEIVE_READY:
             resetConsoleLine();
             net::consoleOutput(receiveMessage().c_str());
@@ -64,17 +69,21 @@ namespace client
         unsigned long   result;
         int             timeout = 100;
 
-
+        // Wait for server and user input if connected to a valid server
         if (m_connected)
             result = WaitForMultipleObjects(2, handles, FALSE, timeout);
+
+        // Only poll user input if not
         else
             result = WaitForSingleObject(handles[0], timeout);
 
         switch (result)
         {
+        // new user input
         case WAIT_OBJECT_0:
             return processUserInput();
 
+        // server sent a message
         case WAIT_OBJECT_0 + 1:
             return SERV_RECEIVE_READY;
 
@@ -95,8 +104,11 @@ namespace client
         if (m_input.size() == 0)
             return;
 
+        // TODO: remove
+        //if (m_socket.createClient(m_input, "3983") == NO_ERROR)
         if (m_socket.createClient(m_input, NET_DEFAULT_PORT) == NO_ERROR)
         {
+            // Create WSA event for new messages from server
             m_serverEvent = m_socket.createServerEvent();
             m_connected = true;
             net::consoleOutput("Enter username: ");
@@ -109,6 +121,7 @@ namespace client
 
     void ClientApp::resetConsoleLine(void)
     {
+        // Delete all of user input
         for (size_t count = 0; count < m_input.size(); ++count)
         {
             net::consoleOutput("\b \b");
@@ -117,6 +130,7 @@ namespace client
 
     void ClientApp::displayUserInput(void)
     {
+        // Re-display user input after deletion
         if (m_input.size())
             net::consoleOutput(m_input.c_str());
     }
@@ -129,6 +143,8 @@ namespace client
             net::consoleOutput("Empty username. Please try again: ");
             return;
         }
+
+        // Tell server new client has succesfully joined
         else
         {
             m_name = m_input;
@@ -148,6 +164,7 @@ namespace client
         int             result = ReadConsoleInputA(GetStdHandle(STD_INPUT_HANDLE),
                                                    &inputRecord, 1,
                                                    &numEvents);
+        // failed to read from standard input
         if (result == 0)
             net::reportWindowsError("ReadConsoleInput", GetLastError());
 
@@ -157,6 +174,7 @@ namespace client
 
             switch (character)
             {
+            // no relevant key was pressed
             case '\0':
                 return IN_REGULAR_KEY_PRESSED;
 
@@ -164,6 +182,7 @@ namespace client
                 net::consoleOutput("\r\n");
                 return IN_ENTER_PRESSED;
 
+            // delete last character from input
             case '\b':
                 if (!m_input.empty())
                     m_input.pop_back();
@@ -179,6 +198,7 @@ namespace client
             return IN_REGULAR_KEY_PRESSED;
         }
 
+        // no relevant user input
         return NO_EVENT;
     }
 
@@ -186,13 +206,14 @@ namespace client
     {
         char   receivedData[NET_MAX_PACKET_SIZE];
 
+        // zero-out buffer before receiving data.
+        // needed to get number or non-zero bytes in buffer
         memset(receivedData, 0, sizeof receivedData);
         m_socket.receive(receivedData, sizeof receivedData);
 
         size_t      messageLength = net::Packet::findPacketSize(receivedData);
 
         ResetEvent(m_serverEvent);
-
         return net::Packet::unpackMessage(receivedData, messageLength);
 
     }
@@ -202,13 +223,16 @@ namespace client
         if (m_input.empty())
             return;
 
+        // write sender name in front of message
         net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
 
         message.append(" > ", 3ull);
 
+        // add user message if short enough
         if (!message.append(m_input.c_str(), m_input.size()))
             net::consoleOutput("\nMessage too long.\n");
 
+        // send message to server
         message.append("\r\n\r\n", 4ull);
         m_socket.send(message.getData(), static_cast<int>(message.getSize()));
     }
