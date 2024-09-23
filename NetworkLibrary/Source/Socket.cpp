@@ -24,117 +24,78 @@ namespace net
 
 	int Socket::createClient(const std::string& ipAddress, const std::string& port)
 	{
-		addrinfo	hints;
+		int			result = 0;
 		addrinfo*	addrList;
-
-		memset(&hints, 0, sizeof hints);
-		hints.ai_family = AF_UNSPEC;
-		hints.ai_socktype = SOCK_STREAM;
-
-		getaddrinfo(ipAddress.c_str(), port.c_str(), &hints, &addrList);
-
-		m_handle = ::socket(addrList->ai_family, addrList->ai_socktype, addrList->ai_protocol);
-
-		if (m_handle == SocketParams::INVALID_HANDLE)
+		IPData		socketData
 		{
-			int		error = WSAGetLastError();
-			reportWindowsError("::socket", error);
+			.m_ipString = ipAddress.c_str(),
+			.m_portString = port.c_str(),
+		};
 
-			return error;
-		}
-
-		// server to connect to
-		int				result;
-		unsigned long	optionEnabled = 0ul;
-
-		result = setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
-			(const char*)&optionEnabled, sizeof optionEnabled);
-
-		if (result == SOCKET_ERROR)
-			reportWindowsError("ioctlsocket", WSAGetLastError());
-
+		// Create socket
+		createDualStackSocket(&socketData);
 		consoleOutput("Connecting...\n");
-		result = ::connect(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
+		addrList = static_cast<addrinfo*>(socketData.m_resultAddr);
+
+		if (addrList)
+			result = ::connect(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
 
 		if (result == NO_ERROR)
 		{
 			consoleOutput("Client connected successfully.\n\n");
 
 			// enable nonblocking mode after connection
-			optionEnabled = 1ul;
-			result = ioctlsocket(m_handle, FIONBIO, &optionEnabled);
-
-			if (result == SOCKET_ERROR)
-				reportWindowsError("ioctlsocket", WSAGetLastError());
+			enableNonBlocking();
 		}
 		else
 			reportWindowsError("connect", WSAGetLastError());
 
+		// free dynamically allocated addrinfo in createDualStackSocket()
+		freeaddrinfo(addrList);
 		return result;
 	}
 
 	int Socket::createServer(const std::string& port)
 	{
-		addrinfo	hints;
+		int			result = 0;
 		addrinfo*	addrList;
-
-		memset(&hints, 0, sizeof hints);
-		hints.ai_family = AF_UNSPEC;
-		hints.ai_socktype = SOCK_STREAM;
-		hints.ai_flags = AI_PASSIVE;
-
-		getaddrinfo(nullptr, port.c_str(), &hints, &addrList);
-
-		m_handle = ::socket(addrList->ai_family, addrList->ai_socktype, addrList->ai_protocol);
-
-		if (m_handle == SocketParams::INVALID_HANDLE)
+		IPData		socketData
 		{
-			int		error = WSAGetLastError();
-			reportWindowsError("::socket", error);
+			.m_portString = port.c_str()
+		};
 
-			return error;
-		}
+		// create socket supporting both IPV4 and IPV6
+		createDualStackSocket(&socketData);
+		addrList = static_cast<addrinfo*>(socketData.m_resultAddr);
 
-		int				result;
-		unsigned long	optionEnabled = 0ul;
-
-
-		result = setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
-							(const char*)&optionEnabled, sizeof optionEnabled);
-
-
-		result = ::bind(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
+		if (addrList)
+			result = ::bind(m_handle, addrList->ai_addr, (int)addrList->ai_addrlen);
 
 		if (result)
-			return result;
+			reportWindowsError("bind", WSAGetLastError());
 
-		result = this->listen();
-		optionEnabled = 1ul;
-		result = ioctlsocket(m_handle, FIONBIO, &optionEnabled);
+		this->listen();
 
-		if (result == SOCKET_ERROR)
-			reportWindowsError("ioctlsocket", WSAGetLastError());
-
+		enableNonBlocking();
 		displayLocalIP();
+
 		freeaddrinfo(addrList);
-
 		return result;
-
 	}
 
 	Socket Socket::accept() const
 	{
 		Handle_t			acceptedSocket;
 		sockaddr_storage	incomingAddr;
+		int					addrLength = sizeof incomingAddr;
 
 		char				addressString[INET6_ADDRSTRLEN];
 		unsigned long		bufferLength = INET6_ADDRSTRLEN;
 
-		int					addrLength = sizeof incomingAddr;
-
+		// Accept client socket
 		acceptedSocket = ::accept(m_handle,
-			reinterpret_cast<sockaddr*>(&incomingAddr),
-			&addrLength);
+								  reinterpret_cast<sockaddr*>(&incomingAddr),
+								  &addrLength);
 
 		if (acceptedSocket == SocketParams::INVALID_HANDLE)
 			reportWindowsError("Socket::accept", SOCKET_ERROR);
@@ -143,25 +104,27 @@ namespace net
 		{
 			addrLength = sizeof incomingAddr;
 
+			// Get IP from incoming socket
 			WSAAddressToStringA(reinterpret_cast<sockaddr*>(&incomingAddr),
-				addrLength, nullptr, addressString, &bufferLength);
+								addrLength, nullptr, addressString, &bufferLength);
 
 			consoleOutput("Connection received from: %1\n", addressString);
 
 		}
 
 		return Socket(acceptedSocket);
-
 	}
 
 
 	void* Socket::createServerEvent(void) const
 	{
+		// Create empty event
 		void*	eventHandle = WSACreateEvent();
 
 		if (!eventHandle)
 			reportWindowsError("WSACreateEvent", WSAGetLastError());
 
+		// Associate empty event to client sockets
 		int		result = WSAEventSelect(m_handle, eventHandle, FD_READ);
 
 		if (result == SOCKET_ERROR)
@@ -174,9 +137,11 @@ namespace net
 	{
 		const int	noFlags = 0;
 
+		// write received data into buffer
+		// and return number of bytes received
 		int			result = ::send(target.m_handle,
-			reinterpret_cast<const char*>(data),
-			size, noFlags);
+									reinterpret_cast<const char*>(data),
+									size, noFlags);
 
 		if (result == SOCKET_ERROR)
 			reportWindowsError("::send", WSAGetLastError());
@@ -188,9 +153,11 @@ namespace net
 	{
 		const int	noFlags = 0;
 
+		// write received data into buffer
+		// and return number of bytes received
 		int			result = ::send(m_handle,
-			reinterpret_cast<const char*>(data),
-			size, noFlags);
+									reinterpret_cast<const char*>(data),
+									size, noFlags);
 
 		if (result == SOCKET_ERROR)
 			reportWindowsError("::send", WSAGetLastError());
@@ -202,6 +169,8 @@ namespace net
 	{
 		const int	noFlags = 0;
 
+		// write received data into buffer
+		// and return number of bytes received
 		int			bytesRecv = ::recv(m_handle,
 									   reinterpret_cast<char*>(buffer),
 									   size, noFlags);
@@ -216,6 +185,7 @@ namespace net
 	{
 		const int	noFlags = 0;
 
+		// write received data into buffer and return bytes received
 		int			bytesRecv = ::recv(socket.m_handle,
 									   reinterpret_cast<char*>(buffer),
 									   size, noFlags);
@@ -283,34 +253,13 @@ namespace net
 		return result;
 	}
 
-	//void* Socket::initAddressInfo(const char* addressString) const
-	//{
-	//	return nullptr;
-	//}
-
-	int Socket::bind(void* addrData) const
-	{
-		int			result;
-		sockaddr*	server = static_cast<sockaddr*>(addrData);
-
-		result = ::bind(m_handle, server, sizeof sockaddr_in6);
-
-		if (result != NO_ERROR)
-		{
-			reportWindowsError("::bind", WSAGetLastError());
-			this->close();
-		}
-
-		return result;
-	}
-
 
 	void Socket::displayLocalIP()
 	{
-		char		stringBuf[NI_MAXHOST];
-		addrinfo*	result;
-
-		int error = gethostname(stringBuf, NI_MAXHOST);
+		char			stringBuf[NI_MAXHOST];
+		unsigned long	size = static_cast<int>(sizeof stringBuf);
+		addrinfo*		result;
+		int				error = gethostname(stringBuf, NI_MAXHOST);
 
 		if (error != NO_ERROR)
 			reportWindowsError("gethostname", WSAGetLastError());
@@ -321,9 +270,7 @@ namespace net
 		if (error != NO_ERROR)
 			reportWindowsError("getaddrinfo", error);
 
-
-		unsigned long size = static_cast<int>(sizeof stringBuf);
-
+		// Display all IP addresses on this machine
 		for (addrinfo* pointer = result; pointer != nullptr; pointer = pointer->ai_next)
 		{
 			error = WSAAddressToStringA(pointer->ai_addr,
@@ -346,32 +293,89 @@ namespace net
 
 	Socket::Port_t Socket::convertPortNumber(const std::string& portString)
 	{
-		if (isdigit(portString[0]))
+		bool	digit = true;
+
+		// Check if whole string is a number
+		for (char character : portString)
+		{
+			if (!isdigit(character))
+			{
+				digit = false;
+				break;
+			}
+		}
+
+		// Simply convert digits to number
+		if (digit)
 			return static_cast<Port_t>(atoi(portString.c_str()));
 
+		// Get port number from service name if string is not a number
 		else
 		{
-			servent* servEntry = getservbyname(portString.c_str(), nullptr);
+			servent*	servEntry = getservbyname(portString.c_str(), nullptr);
 
 			return ntohs(servEntry->s_port);
 		}
 	}
 
-
-
-	int Socket::connect(void* addrData) const
+	int Socket::enableNonBlocking()
 	{
-		int				result;
-		sockaddr_in*	server = static_cast<sockaddr_in*>(addrData);
+		unsigned long	enabled = 1ul;
 
-		result = ::connect(m_handle, (sockaddr*)server, sizeof * server);
+		// Disabling blocking mode will cause blocking send/receive calls to fail
+		int				result = ioctlsocket(m_handle, FIONBIO, &enabled);
 
-		if (result != NO_ERROR)
-		{
-			reportWindowsError("::connect", WSAGetLastError());
-			this->close();
-		}
+		if (result == SOCKET_ERROR)
+			reportWindowsError("ioctlsocket", WSAGetLastError());
 
 		return result;
+	}
+
+	int Socket::createDualStackSocket(void* ipData)
+	{
+		IPData*			socketData = static_cast<IPData*>(ipData);
+		addrinfo		hints;
+		addrinfo*		results;
+
+		// Zero-out and assign hints
+		memset(&hints, 0, sizeof addrinfo);
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+
+		if (!socketData->m_ipString)
+			hints.ai_flags = AI_PASSIVE;
+
+		if(getaddrinfo(socketData->m_ipString, socketData->m_portString, &hints, &results))
+			reportWindowsError("getaddrinfo", WSAGetLastError());
+
+		// Create socket
+		socketData->m_resultAddr = results;
+		m_handle = ::socket(results->ai_family, results->ai_socktype, results->ai_protocol);
+
+		if (m_handle == SocketParams::INVALID_HANDLE)
+		{
+			int		error = WSAGetLastError();
+
+			reportWindowsError("::socket", error);
+			return error;
+		}
+
+		return enableIPV4Support();
+	}
+
+	int Socket::enableIPV4Support()
+	{
+		unsigned long		enabled = 0ul;
+		int					socketOptResult;
+
+		// Set v6 only option to false
+		socketOptResult	= setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
+									(const char*)&enabled, sizeof enabled);
+
+		if (socketOptResult != NO_ERROR)
+			reportWindowsError("setsockopt", WSAGetLastError());
+
+		return socketOptResult;
+
 	}
 }

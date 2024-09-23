@@ -22,6 +22,13 @@ namespace net
 			INVALID_HANDLE = static_cast<Handle_t>(~0),
 		};
 
+		struct IPData
+		{
+			const char*		m_ipString;
+			const char*		m_portString;
+			void*			m_resultAddr;
+		};
+
 
 	public:
 
@@ -77,12 +84,6 @@ namespace net
 
 	private:
 
-		// Connect to host socket
-		int			connect(void* addrData)									const;
-
-		// Bind listening socket to port
-		int			bind(void* addrData)									const;
-
 		// Listen to incoming connections
 		int			listen(void)											const;
 
@@ -92,14 +93,18 @@ namespace net
 		// Convert service name or port number string to unsigned short
 		Port_t      convertPortNumber(const std::string& portString);
 
+		// Disable blocking mode
+		int			enableNonBlocking();
 
-		// Members
+		// Create socket supporting both IPV4 and IPV6
+		// WARNING: caller must also call freeaddrinfo()
+		// on ipData->m_resultAddr
+		int			createDualStackSocket(void* ipData);
+
+		// Set IPV6 only option to false
+		int			enableIPV4Support();
 
 		Handle_t	m_handle = SocketParams::INVALID_HANDLE;
-
-
-		// Static members
-
 		static int  m_pendingConnectionCap;
 
 	};
