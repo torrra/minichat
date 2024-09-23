@@ -10,8 +10,6 @@
 
 namespace net
 {
-	// Size = 528B, padding = 0B
-
 	class Packet
 	{
 	private:
@@ -19,15 +17,23 @@ namespace net
 	public:
 						Packet(const void* buffer, size_t size, const Socket& sender);
 						~Packet(void) = default;
-		bool			append(const void* buffer, size_t size);
-		size_t			getSize(void)							const;
 
+		// Add data at the end of buffer
+		bool			append(const void* buffer, size_t size);
+
+		// Accessors
+
+		size_t			getSize(void)							const;
 		const char*		getData(void)							const;
 		const Socket&	getSender(void)							const;
 
 		// Only use if packet buffer has been zeroed-out before calling receive
 		static size_t          findPacketSize(char* packetBuffer);
+
+		// Write packet data into string
 		static std::string     unpackMessage(const net::Packet& packet);
+
+		// Write void* and size into string
 		static std::string     unpackMessage(const char* packetData, size_t size);
 
 
