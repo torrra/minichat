@@ -25,12 +25,11 @@ namespace net
 	int Socket::createClient(const std::string& ipAddress, const std::string& port)
 	{
 		addrinfo	hints;
-		addrinfo* addrList;
+		addrinfo*	addrList;
 
 		memset(&hints, 0, sizeof hints);
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
-		hints.ai_flags = AI_PASSIVE;
 
 		getaddrinfo(ipAddress.c_str(), port.c_str(), &hints, &addrList);
 
@@ -68,6 +67,8 @@ namespace net
 			if (result == SOCKET_ERROR)
 				reportWindowsError("ioctlsocket", WSAGetLastError());
 		}
+		else
+			reportWindowsError("connect", WSAGetLastError());
 
 		return result;
 	}
