@@ -16,6 +16,7 @@ namespace net
 							  FORMAT_MESSAGE_FROM_SYSTEM |
 						      FORMAT_MESSAGE_IGNORE_INSERTS;
 
+		// Get ANSI string associated with error code
 	    int		charCount = FormatMessageA(formatFlags, nullptr, error, GetUserDefaultLangID(),
 										  (char*) &buffer, 0, nullptr);
 
@@ -30,6 +31,9 @@ namespace net
 
 			OutputDebugStringA("FormatMessage error");
 			DebugBreak();
+
+			// debugbreak will stop here, allowing us to see the error codes
+			formatFailure = formatFailure;
 		}
 
 	}
