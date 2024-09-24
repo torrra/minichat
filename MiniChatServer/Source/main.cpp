@@ -20,6 +20,7 @@ int serverMain(void)
 		server::processMessages(serverApp, running);
     }
 
+	serverApp.terminate();
 	net::cleanup();
 	return errorStartup;
 }
