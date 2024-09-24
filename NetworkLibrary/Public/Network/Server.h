@@ -3,7 +3,6 @@
 #include "Socket.h"
 #include "FileDescriptor.h"
 #include "Packet.h"
-//#include "IPData.h"
 
 #include <vector>
 
@@ -25,6 +24,7 @@ namespace net
 
         Packet&                 createPacket(void* data, size_t size);
         void                    addPacket(const Packet& packet);
+        void                    terminate(void);
 
         // Accessors
 

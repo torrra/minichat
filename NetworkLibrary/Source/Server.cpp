@@ -28,17 +28,8 @@ namespace net
 
     Server::~Server(void)
     {
-        // Terminate every connection
-        for (SocketEvent client : m_clients)
-        {
-            Socket clientSock(client.m_socket);
-
-            clientSock.shutdown();
-            clientSock.close();
-        }
-
-        m_socket.shutdown();
-        m_socket.close();
+        if (m_socket.isValid())
+            terminate();
     }
 
     int Server::serverUpdate(void)
@@ -129,6 +120,19 @@ namespace net
     void Server::addPacket(const Packet& packet)
     {
         m_outgoingPackets.push_back(packet);
+    }
+
+    void Server::terminate(void)
+    {
+        // Close all sockets including listening socket
+        for (SocketEvent& client : m_clients)
+        {
+            Socket      clientSock(client.m_socket);
+
+            clientSock.close();
+        }
+
+       m_socket = Socket::INVALID_HANDLE;
     }
 
     Socket Server::checkListener(const SocketEvent& listener)
