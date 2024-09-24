@@ -8,12 +8,14 @@
 #include <Windows.h>
 #include <iostream>
 
+#ifndef SHUTDOWN_MSG
+#define SHUTDOWN_MSG "jrII0JB0y6"
+#endif // !NET_SHUTDOWN_MSG
+
 namespace client
 {
     ClientApp::~ClientApp(void)
     {
-        m_socket.shutdown();
-        m_socket.close();
     }
 
     void ClientApp::welcomeMessage(void)
@@ -26,8 +28,7 @@ namespace client
 
     void ClientApp::update(bool& running)
     {
-        ClientEvent clientEvent = waitForMessages();
-        (void)running;
+        ClientEvent     clientEvent = waitForMessages();
 
         switch (clientEvent)
         {
@@ -51,14 +52,16 @@ namespace client
         // delete user input from console before displaying a
         // new message and re-displaying it
         case SERV_RECEIVE_READY:
-            resetConsoleLine();
-            net::consoleOutput(receiveMessage().c_str());
-            displayUserInput();
+            processIncomingMessage(running);
             break;
 
         default: break;
 
         }
+
+        // terminate connection if we're exiting caller loop
+        if (!running)
+            m_socket.close();
 
     }
 
@@ -119,7 +122,7 @@ namespace client
 
     }
 
-    void ClientApp::resetConsoleLine(void)
+    void ClientApp::resetConsoleLine(void) const
     {
         // Delete all of user input
         for (size_t count = 0; count < m_input.size(); ++count)
@@ -128,7 +131,7 @@ namespace client
         }
     }
 
-    void ClientApp::displayUserInput(void)
+    void ClientApp::displayUserInput(void) const
     {
         // Re-display user input after deletion
         if (m_input.size())
@@ -202,7 +205,7 @@ namespace client
         return NO_EVENT;
     }
 
-    std::string ClientApp::receiveMessage(void)
+    std::string ClientApp::receiveMessage(void) const
     {
         char   receivedData[NET_MAX_PACKET_SIZE];
 
@@ -218,7 +221,7 @@ namespace client
 
     }
 
-    void ClientApp::sendMessage(void)
+    void ClientApp::sendMessage(void) const
     {
         if (m_input.empty())
             return;
@@ -235,5 +238,34 @@ namespace client
         // send message to server
         message.append("\r\n\r\n", 4ull);
         m_socket.send(message.getData(), static_cast<int>(message.getSize()));
+    }
+
+
+    ClientApp::ClientEvent ClientApp::checkSpecialMessages(const std::string& message) const
+    {
+        if (message.find(SHUTDOWN_MSG) != std::string::npos)
+            return SERV_SHUTDOWN;
+
+        else
+            return NO_EVENT;
+    }
+
+    void ClientApp::processIncomingMessage(bool& running) const
+    {
+        std::string message = receiveMessage();
+
+        switch (checkSpecialMessages(message))
+        {
+        case SERV_SHUTDOWN:
+            running = false;
+            net::consoleOutput("Server disconnected. Shutting down client.\n");
+            break;
+
+        default:
+            resetConsoleLine();
+            net::consoleOutput(message.c_str());
+            displayUserInput();
+            break;
+        }
     }
 }

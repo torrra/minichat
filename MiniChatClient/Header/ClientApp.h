@@ -18,7 +18,8 @@ namespace client
             NO_EVENT,
             IN_REGULAR_KEY_PRESSED,
             IN_ENTER_PRESSED,
-            SERV_RECEIVE_READY
+            SERV_RECEIVE_READY,
+            SERV_SHUTDOWN
         };
 
     public:
@@ -40,8 +41,8 @@ namespace client
 
         // Move user input when receiving a message
 
-        void            resetConsoleLine(void);
-        void            displayUserInput(void);
+        void            resetConsoleLine(void)                              const;
+        void            displayUserInput(void)                              const;
 
 
         // Wait for input or server event
@@ -52,12 +53,13 @@ namespace client
 
         // Message handling
 
-        std::string     receiveMessage(void);
-        void            sendMessage(void);
+        std::string     receiveMessage(void)                                const;
+        void            sendMessage(void)                                   const;
 
+        ClientEvent     checkSpecialMessages(const std::string& message)    const;
+        void            processIncomingMessage(bool& running)               const;
 
-
-        // Client sockat handle
+        // Client socket handle
         net::Socket     m_socket;
 
         // Username
