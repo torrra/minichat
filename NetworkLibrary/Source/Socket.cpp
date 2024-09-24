@@ -217,6 +217,12 @@ namespace net
 		return !(*this == rhs);
 	}
 
+	Socket& Socket::operator=(Handle_t handle)
+	{
+		m_handle = handle;
+		return *this;
+	}
+
 	int& Socket::connectionBackLog()
 	{
 		return m_pendingConnectionCap;
@@ -233,13 +239,14 @@ namespace net
 		return result;
 	}
 
-	int Socket::close() const
+	int Socket::close()
 	{
 		int		result = ::closesocket(m_handle);
 
 		if (result != NO_ERROR)
 			reportWindowsError("::close", WSAGetLastError());
 
+		m_handle = INVALID_HANDLE;
 		return result;
 	}
 

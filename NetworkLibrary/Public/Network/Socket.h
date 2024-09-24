@@ -13,14 +13,15 @@ namespace net
 	public:
 		using Handle_t = unsigned long long;
 
-	private:
-
-		using Port_t = unsigned short;
-
 		enum SocketParams : Handle_t
 		{
 			INVALID_HANDLE = static_cast<Handle_t>(~0),
 		};
+
+	private:
+
+		using Port_t = unsigned short;
+
 
 		struct IPData
 		{
@@ -47,7 +48,7 @@ namespace net
 		int			shutdown(void)											const;
 
 		// Close socket
-		int			close(void)												const;
+		int			close(void);
 
 		// Accept incoming connection (for listening socket)
 		Socket		accept(void)											const;
@@ -78,6 +79,8 @@ namespace net
 
 		bool		operator==(const Socket& rhs)							const;
 		bool		operator!=(const Socket& rhs)							const;
+
+		Socket&		operator=(Handle_t handle);
 
 		// Server side pending connection queue
 		static int& connectionBackLog();
