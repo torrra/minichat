@@ -22,7 +22,7 @@ namespace net
         std::vector<Packet>     receiveAllPackets(void);
         void                    sendAllPackets(void);
 
-        Packet&                 createPacket(void* data, size_t size);
+        Packet&                 createPacket(const void* data, size_t size);
         void                    addPacket(const Packet& packet);
         void                    terminate(void);
 

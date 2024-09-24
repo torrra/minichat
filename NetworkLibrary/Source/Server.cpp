@@ -112,7 +112,7 @@ namespace net
         m_outgoingQueue.clear();
     }
 
-    Packet& Server::createPacket(void* data, size_t size)
+    Packet& Server::createPacket(const void* data, size_t size)
     {
         return m_outgoingPackets.emplace_back(data, size, m_socket);
     }
