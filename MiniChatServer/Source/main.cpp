@@ -1,34 +1,62 @@
 #include <Network/Network.h>
 #include <Network/Packet.h>
 #include <Network/Server.h>
+#include <Network/ConsoleOutput.h>
 
-#include <iostream>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
-int main(void)
+#include "MessageHandling.h"
+
+int serverMain(void)
 {
-	int errorStartup = net::startup();
-    bool running = true;
-
-    net::Server server;
+	int				errorStartup = net::startup();
+    bool			running = true;
+    net::Server		serverApp;
 
     while(running)
     {
-       server.serverUpdate();
-
-       auto packets = server.receiveAllPackets();
-
-       for (const net::Packet& received : packets)
-       {
-           std::cout << net::Packet::unpackMessage(received);
-
-           server.addPacket(received);
-       }
-
-       server.sendAllPackets();
-
+		serverApp.serverUpdate();
+		server::processMessages(serverApp, running);
     }
 
 	net::cleanup();
-
 	return errorStartup;
+}
+
+
+static void printMemory(_CrtMemState* start, _CrtMemState* end)
+{
+	// difference between start end end state
+	_CrtMemState	diff;
+
+	// print memory information
+	if (_CrtMemDifference(&diff, start, end))
+	{
+		OutputDebugString(TEXT(" ------ _CrtMemDumpStatistics ------ "));
+		_CrtMemDumpStatistics(&diff);
+
+		OutputDebugString(TEXT(" ------ _CrtMemDumpAllObjectsSince ------ "));
+		_CrtMemDumpAllObjectsSince(start);
+
+		OutputDebugString(TEXT(" ------ _CrtDumpMemoryLeaks ------"));
+		_CrtDumpMemoryLeaks();
+	}
+}
+
+int main(void)
+{
+	// Memory states to look for memory leaks
+	_CrtMemState	start;
+	_CrtMemState	end;
+
+	_CrtMemCheckpoint(&start);
+
+	// Main application function
+	int		returnValue = serverMain();
+
+	_CrtMemCheckpoint(&end);
+	printMemory(&start, &end);
+
+	return returnValue;
 }
