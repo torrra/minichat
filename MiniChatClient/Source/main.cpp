@@ -1,5 +1,6 @@
 #include <Network/Network.h>
 #include <Network/Socket.h>
+#include <Network/ConsoleOutput.h>
 
 #include "ClientApp.h"
 
@@ -58,6 +59,9 @@ int main(void)
 
 	_CrtMemCheckpoint(&end);
 	printMemory(&start, &end);
+
+	net::consoleOutput("Press enter to exit.\n");
+	(void) getchar();
 
 	return returnValue;
 }
