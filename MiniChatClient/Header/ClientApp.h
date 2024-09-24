@@ -54,7 +54,7 @@ namespace client
         // Message handling
 
         std::string     receiveMessage(void)                                const;
-        void            sendMessage(void)                                   const;
+        ClientEvent     sendMessage(void)                                   const;
 
         ClientEvent     checkSpecialMessages(const std::string& message)    const;
         void            processIncomingMessage(bool& running)               const;

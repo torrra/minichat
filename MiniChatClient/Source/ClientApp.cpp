@@ -9,8 +9,12 @@
 #include <iostream>
 
 #ifndef SHUTDOWN_MSG
-#define SHUTDOWN_MSG "jrII0JB0y6"
+#define SHUTDOWN_MSG    "jrII0JB0y6"
 #endif // !NET_SHUTDOWN_MSG
+
+#ifndef SERVER_ERROR
+#define SERVER_ERROR    -1
+#endif
 
 namespace client
 {
@@ -43,8 +47,8 @@ namespace client
                 registerUsername();
 
             // send message
-            else
-                sendMessage();
+            else if (sendMessage() == SERV_SHUTDOWN)
+                running = false;
 
             m_input.clear();
             break;
@@ -221,10 +225,10 @@ namespace client
 
     }
 
-    void ClientApp::sendMessage(void) const
+    ClientApp::ClientEvent ClientApp::sendMessage(void) const
     {
         if (m_input.empty())
-            return;
+            return NO_EVENT;
 
         // write sender name in front of message
         net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
@@ -237,12 +241,23 @@ namespace client
 
         // send message to server
         message.append("\r\n\r\n", 4ull);
-        m_socket.send(message.getData(), static_cast<int>(message.getSize()));
+
+        int     size = static_cast<int>(message.getSize());
+
+        // Disconnect client if send failed
+        if (m_socket.send(message.getData(), size) == SERVER_ERROR)
+        {
+            net::consoleOutput("Lost connection to server. Message not sent.\n");
+            return SERV_SHUTDOWN;
+        }
+        else
+            return NO_EVENT;
     }
 
 
     ClientApp::ClientEvent ClientApp::checkSpecialMessages(const std::string& message) const
     {
+        // look for special shutdown message
         if (message.find(SHUTDOWN_MSG) != std::string::npos)
             return SERV_SHUTDOWN;
 
@@ -252,15 +267,17 @@ namespace client
 
     void ClientApp::processIncomingMessage(bool& running) const
     {
-        std::string message = receiveMessage();
+        std::string     message = receiveMessage();
 
         switch (checkSpecialMessages(message))
         {
+        // shutdown message received
         case SERV_SHUTDOWN:
             running = false;
             net::consoleOutput("Server disconnected. Shutting down client.\n");
             break;
 
+        // normal message received
         default:
             resetConsoleLine();
             net::consoleOutput(message.c_str());
