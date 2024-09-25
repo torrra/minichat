@@ -74,7 +74,7 @@ namespace client
     {
         void*           handles[2]{ GetStdHandle(STD_INPUT_HANDLE), m_serverEvent };
         unsigned long   result;
-        int             timeout = 100;
+        int             timeout = static_cast<int>(INFINITE);
 
         // Wait for server and user input if connected to a valid server
         if (m_connected)
@@ -156,9 +156,11 @@ namespace client
         {
             m_name = m_input;
 
-            std::string     joinMessage = m_input;
+            //std::string     joinMessage = m_input;
+            std::string     joinMessage = "/user register ";
 
-            joinMessage += " has joined.\n";
+
+            joinMessage += m_input;
             net::consoleOutput("Welcome, %1\n\n", m_input.c_str());
             m_socket.send(joinMessage.c_str(), static_cast<int>(joinMessage.size()));
         }
@@ -230,15 +232,22 @@ namespace client
         if (m_input.empty())
             return NO_EVENT;
 
-        // write sender name in front of message
-        net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
+        //// write sender name in front of message
+        //net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
 
-        message.append(" > ", 3ull);
+        //message.append(" > ", 3ull);
 
-        // add user message if short enough
-        if (!message.append(m_input.c_str(), m_input.size()))
+        //// add user message if short enough
+        //if (!message.append(m_input.c_str(), m_input.size()))
+        //    net::consoleOutput("\nMessage too long.\n");
+
+        if (m_input.size() >= NET_MAX_PACKET_SIZE - 4ull)
+        {
             net::consoleOutput("\nMessage too long.\n");
+            return ClientEvent::NO_EVENT;
+        }
 
+        net::Packet message(m_input.c_str(), m_input.size(), m_socket);
         // send message to server
         message.append("\r\n\r\n", 4ull);
 
