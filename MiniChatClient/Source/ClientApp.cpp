@@ -112,7 +112,6 @@ namespace client
             return;
 
         // TODO: remove
-        //if (m_socket.createClient(m_input, "3983") == NO_ERROR)
         if (m_socket.createClient(m_input, NET_DEFAULT_PORT) == NO_ERROR)
         {
             // Create WSA event for new messages from server
@@ -131,7 +130,8 @@ namespace client
         // Delete all of user input
         for (size_t count = 0; count < m_input.size(); ++count)
         {
-            net::consoleOutput("\b \b");
+            if (!checkEmptyLine())
+                net::consoleOutput("\b \b");
         }
     }
 
@@ -218,7 +218,7 @@ namespace client
         return NO_EVENT;
     }
 
-    bool ClientApp::checkEmptyLine(void)
+    bool ClientApp::checkEmptyLine(void) const
     {
         CONSOLE_SCREEN_BUFFER_INFO      screenInfo;
         void*                           handle = GetStdHandle(STD_OUTPUT_HANDLE);
