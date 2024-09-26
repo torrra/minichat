@@ -26,17 +26,26 @@ file (GLOB_RECURSE TARGET_EXTRA_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.txt
 )
 
+file(GLOB TARGET_ROOT_DOCS
+	${CMAKE_SOURCE_DIR}/.gitignore
+	${CMAKE_SOURCE_DIR}/README.txt
+)
+	
+
 # Group files together
 set(TARGET_FILES ${TARGET_HEADER_FILES} ${TARGET_SOURCE_FILES} ${TARGET_EXTRA_FILES})
 
 # Generate VS filters matching the file tree
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${TARGET_FILES})
-
+source_group("Extras" FILES ${TARGET_ROOT_DOCS})
 # Create library
 add_library(${TARGET_NAME})
 
 # Set sources for compilation, linking and VS filters
-target_sources(${TARGET_NAME} PRIVATE ${TARGET_FILES})
+target_sources(${TARGET_NAME}
+	PRIVATE ${TARGET_FILES}
+	PRIVATE ${TARGET_ROOT_DOCS}
+)
 target_include_directories(${TARGET_NAME}
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Private
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Public/Network
