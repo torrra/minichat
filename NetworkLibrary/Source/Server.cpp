@@ -117,6 +117,11 @@ namespace net
         return m_outgoingPackets.emplace_back(data, size, m_socket);
     }
 
+    Packet& Server::createPacket(const void* data, size_t size, Socket sender)
+    {
+        return m_outgoingPackets.emplace_back(data, size, sender);
+    }
+
     void Server::addPacket(const Packet& packet)
     {
         m_outgoingPackets.push_back(packet);

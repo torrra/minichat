@@ -23,6 +23,9 @@ namespace net
         void                    sendAllPackets(void);
 
         Packet&                 createPacket(const void* data, size_t size);
+        Packet&                 createPacket(const void* data,
+                                             size_t size, Socket sender);
+
         void                    addPacket(const Packet& packet);
         void                    terminate(void);
 
