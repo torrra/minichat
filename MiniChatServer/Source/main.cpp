@@ -10,17 +10,17 @@
 
 int serverMain(void)
 {
-	int				errorStartup = net::startup();
-    bool			running = true;
-    net::Server		serverApp;
+	int						errorStartup = net::startup();
+    bool					running = true;
+    server::ServerData		serverApp;
 
     while(running)
     {
-		serverApp.serverUpdate();
+		serverApp.m_server.serverUpdate();
 		server::processMessages(serverApp, running);
     }
 
-	serverApp.terminate();
+	serverApp.m_server.terminate();
 	net::cleanup();
 	return errorStartup;
 }
@@ -47,6 +47,8 @@ static void printMemory(_CrtMemState* start, _CrtMemState* end)
 
 int main(void)
 {
+	SetConsoleTitleA("Mini chat Server");
+
 	// Memory states to look for memory leaks
 	_CrtMemState	start;
 	_CrtMemState	end;
