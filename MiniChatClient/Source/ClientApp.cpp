@@ -232,22 +232,14 @@ namespace client
         if (m_input.empty())
             return NO_EVENT;
 
-        //// write sender name in front of message
-        //net::Packet     message(m_name.c_str(), m_name.size(), m_socket);
-
-        //message.append(" > ", 3ull);
-
-        //// add user message if short enough
-        //if (!message.append(m_input.c_str(), m_input.size()))
-        //    net::consoleOutput("\nMessage too long.\n");
-
         if (m_input.size() >= NET_MAX_PACKET_SIZE - 4ull)
         {
             net::consoleOutput("\nMessage too long.\n");
             return ClientEvent::NO_EVENT;
         }
 
-        net::Packet message(m_input.c_str(), m_input.size(), m_socket);
+        net::Packet     message(m_input.c_str(), m_input.size(), m_socket);
+
         // send message to server
         message.append("\r\n\r\n", 4ull);
 
@@ -288,6 +280,12 @@ namespace client
 
         // normal message received
         default:
+
+            // do not display message if user has
+            // not entered a username yet
+            if (m_name.empty())
+                return;
+
             resetConsoleLine();
             net::consoleOutput(message.c_str());
             displayUserInput();
