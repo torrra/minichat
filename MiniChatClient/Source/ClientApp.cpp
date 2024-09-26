@@ -193,11 +193,18 @@ namespace client
 
             // delete last character from input
             case '\b':
+
+                // Do not delete characters that were entered by user
                 if (!m_input.empty())
+                {
                     m_input.pop_back();
 
-                net::consoleOutput("\b ");
-                break;
+                    // Only delete a character if line is not empty
+                    if (!checkEmptyLine())
+                        net::consoleOutput("\b \b");
+                }
+
+                return IN_REGULAR_KEY_PRESSED;
 
             default:
                 m_input += character;
@@ -209,6 +216,40 @@ namespace client
 
         // no relevant user input
         return NO_EVENT;
+    }
+
+    bool ClientApp::checkEmptyLine(void)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO      screenInfo;
+        void*                           handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        // get window size and cursor positions
+        if (!GetConsoleScreenBufferInfo(handle, &screenInfo))
+        {
+            net::reportWindowsError("GetConsoleScreenBufferInfo", GetLastError());
+            return false;
+        }
+
+
+        if (screenInfo.dwCursorPosition.Y < 1)
+            return false;
+
+        if (screenInfo.dwCursorPosition.X == 0)
+        {
+            COORD newPos
+            {
+                .X = screenInfo.srWindow.Right,
+                .Y = screenInfo.dwCursorPosition.Y - 1
+            };
+
+            // Move cursor up
+            SetConsoleCursorPosition(handle, newPos);
+            net::consoleOutput(" ");
+
+            return true;
+        }
+
+        return false;
     }
 
     std::string ClientApp::receiveMessage(void) const

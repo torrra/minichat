@@ -50,6 +50,7 @@ namespace client
 
         // Read user input
         ClientEvent     processUserInput(void);
+        bool            checkEmptyLine(void);
 
         // Message handling
 
