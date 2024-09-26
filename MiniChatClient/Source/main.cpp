@@ -27,6 +27,8 @@ static int clientMain(void)
 	return net::cleanup();
 }
 
+// Only look for memory leaks in debug mode
+#ifndef NDEBUG
 static void printMemory(_CrtMemState* start, _CrtMemState* end)
 {
 	// difference between start end end state
@@ -65,3 +67,18 @@ int main(void)
 
 	return returnValue;
 }
+
+#else
+
+int main(void)
+{
+	// Main application function
+	int		returnValue = clientMain();
+
+	net::consoleOutput("Press enter to exit.\n");
+	(void)getchar();
+
+	return returnValue;
+}
+
+#endif // !NDEBUG

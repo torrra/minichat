@@ -10,21 +10,28 @@
 
 int serverMain(void)
 {
+	// startup WSA and server app
 	int						errorStartup = net::startup();
     bool					running = true;
     server::ServerData		serverApp;
 
     while(running)
     {
+		// update incoming message list
 		serverApp.m_server.serverUpdate();
+
+		// receive and re-send messages
 		server::processMessages(serverApp, running);
     }
 
+	// disconnect clients and close app
 	serverApp.m_server.terminate();
 	net::cleanup();
 	return errorStartup;
 }
 
+// Look for memory leaks in debug mode only
+#ifndef NDEBUG
 
 static void printMemory(_CrtMemState* start, _CrtMemState* end)
 {
@@ -63,3 +70,15 @@ int main(void)
 
 	return returnValue;
 }
+
+#else
+
+int main(void)
+{
+	SetConsoleTitleA("Mini chat Server");
+
+	// Main application function
+	return serverMain();
+}
+
+#endif // !NDEBUG
