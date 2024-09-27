@@ -5,7 +5,7 @@
 #include "Socket.h"
 
 #ifndef NET_MAX_PACKET_SIZE
-#define NET_MAX_PACKET_SIZE		512ull
+#define NET_MAX_PACKET_SIZE		1024ull
 #endif // !NET_MAX_PACKET_SIZE
 
 namespace net
@@ -13,19 +13,21 @@ namespace net
 	class Packet
 	{
 	private:
-						Packet(void) = default;
+								Packet(void) = default;
 	public:
-						Packet(const void* buffer, size_t size, const Socket& sender);
-						~Packet(void) = default;
+								Packet(const void* buffer,
+									   size_t size, const Socket& sender);
+
+								~Packet(void) = default;
 
 		// Add data at the end of buffer
-		bool			append(const void* buffer, size_t size);
+		bool					append(const void* buffer, size_t size);
 
 		// Accessors
 
-		size_t			getSize(void)							const;
-		const char*		getData(void)							const;
-		const Socket&	getSender(void)							const;
+		size_t					getSize(void)							const;
+		const char*				getData(void)							const;
+		const Socket&			getSender(void)							const;
 
 		// Only use if packet buffer has been zeroed-out before calling receive
 		static size_t          findPacketSize(char* packetBuffer);
