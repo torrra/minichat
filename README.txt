@@ -17,4 +17,4 @@ II. Shut down server
 
 III. Special commands
 
-	* Rename user: "/user register <username>" or "/u register <username>"
+	* Rename user: "/nick <username>" or "/u <username>"
