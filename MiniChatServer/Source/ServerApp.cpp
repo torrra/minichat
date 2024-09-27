@@ -195,6 +195,10 @@ namespace server
     bool ServerApp::createChatroom(void)
     {
         size_t          pos = m_currentMessage.m_text.find('#');
+
+        if (pos == std::string::npos)
+            return false;
+
         std::string     roomName = m_currentMessage.m_text.substr(pos);
         size_t          currentIndex = m_clientRooms[m_currentMessage.m_sender];
         Chatroom&       currentRoom = m_rooms[currentIndex];
