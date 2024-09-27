@@ -6,26 +6,23 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#include "MessageHandling.h"
+#include "ServerData.h"
 
-int serverMain(void)
+static int serverMain(void)
 {
 	// startup WSA and server app
 	int						errorStartup = net::startup();
-    bool					running = true;
-    server::ServerData		serverApp;
+    server::ServerApp       serverApp;
 
-    while(running)
+    while(serverApp.isRunning())
     {
-		// update incoming message list
-		serverApp.m_server.serverUpdate();
-
-		// receive and re-send messages
-		server::processMessages(serverApp, running);
+		// update incoming message list and
+		// send them to clients
+		serverApp.updateServer();
     }
 
 	// disconnect clients and close app
-	serverApp.m_server.terminate();
+	serverApp.server().terminate();
 	net::cleanup();
 	return errorStartup;
 }
