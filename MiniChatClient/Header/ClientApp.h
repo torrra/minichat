@@ -18,6 +18,7 @@ namespace client
             NO_EVENT,
             IN_REGULAR_KEY_PRESSED,
             IN_ENTER_PRESSED,
+            IN_ESC_PRESSED,
             SERV_RECEIVE_READY,
             SERV_SHUTDOWN
         };

@@ -55,8 +55,12 @@ namespace client
 
         // delete user input from console before displaying a
         // new message and re-displaying it
-        case SERV_RECEIVE_READY:
-            processIncomingMessage(running);
+        case SERV_RECEIVE_READY: processIncomingMessage(running); break;
+
+        // Shut down client.
+        case IN_ESC_PRESSED:
+            net::consoleOutput("Exiting...\n");
+            running = false;
             break;
 
         default: break;
@@ -64,7 +68,7 @@ namespace client
         }
 
         // terminate connection if we're exiting caller loop
-        if (!running)
+        if (!running && m_socket.isValid())
             m_socket.close();
 
     }
@@ -175,45 +179,39 @@ namespace client
         if (result == 0)
             net::reportWindowsError("ReadConsoleInput", GetLastError());
 
-        if (inputRecord.Event.KeyEvent.bKeyDown)
-        {
+        // no relevant user input
+        if (!inputRecord.Event.KeyEvent.bKeyDown)
+            return NO_EVENT;
+
             char    character = inputRecord.Event.KeyEvent.uChar.AsciiChar;
 
-            switch (character)
+        switch (character)
+        {
+        // no relevant key was pressed
+        case '\0': return IN_REGULAR_KEY_PRESSED;
+        case '\r':  net::consoleOutput("\r\n"); return IN_ENTER_PRESSED;
+
+        // delete last character from input
+        case '\b':
+
+            // Do not delete characters that were entered by user
+            if (!m_input.empty())
             {
-            // no relevant key was pressed
-            case '\0':
-                return IN_REGULAR_KEY_PRESSED;
+                m_input.pop_back();
 
-            case '\r':
-                net::consoleOutput("\r\n");
-                return IN_ENTER_PRESSED;
-
-            // delete last character from input
-            case '\b':
-
-                // Do not delete characters that were entered by user
-                if (!m_input.empty())
-                {
-                    m_input.pop_back();
-
-                    // Only delete a character if line is not empty
-                    if (!checkEmptyLine())
-                        net::consoleOutput("\b \b");
-                }
-
-                return IN_REGULAR_KEY_PRESSED;
-
-            default:
-                m_input += character;
+                // Only delete a character if line is not empty
+                if (!checkEmptyLine())
+                    net::consoleOutput("\b \b");
             }
-
-            net::consoleOutput("%1!c!", character);
             return IN_REGULAR_KEY_PRESSED;
+
+        case '\x1B': return IN_ESC_PRESSED;
+
+        default: m_input += character; break;
         }
 
-        // no relevant user input
-        return NO_EVENT;
+        net::consoleOutput("%1!c!", character);
+        return IN_REGULAR_KEY_PRESSED;
     }
 
     bool ClientApp::checkEmptyLine(void) const
