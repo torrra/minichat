@@ -87,7 +87,7 @@ namespace server
 
         case 'm': moveToRoom(); return true;
 
-        case 'l': break;
+        case 'l': displayCurrentUsers(); return true;
         default: break;
         }
 
@@ -210,11 +210,15 @@ namespace server
         m_rooms.emplace_back(roomName, m_currentMessage.m_sender);
 
         std::string     roomMsg = "Channel " + roomName + " was created.\r\n\r\n";
+        std::string     moveMsg = "Moved to channel " + roomName + ".\r\n";
         net::Socket     serverSock = m_server.getSocket();
 
         // tell users that a new room was created
-        m_server.createPacket(roomMsg.c_str(), roomMsg.size());
         net::consoleOutput(roomMsg.c_str());
+        m_server.createPacket(roomMsg.c_str(), roomMsg.size());
+
+        m_server.getSocket().sendTo(m_currentMessage.m_sender, moveMsg.c_str(),
+                                    (int) moveMsg.size());
         return true;
     }
 
