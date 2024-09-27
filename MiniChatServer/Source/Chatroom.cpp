@@ -7,4 +7,9 @@ namespace server
 	{
 		m_users.push_back(user);
 	}
+
+	Chatroom::Chatroom(const std::string& name)
+		: m_roomName(name)
+	{
+	}
 }

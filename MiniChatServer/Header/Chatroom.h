@@ -11,6 +11,7 @@ namespace server
 	struct Chatroom
 	{
 		Chatroom(const std::string& name, net::Socket::Handle_t user);
+		Chatroom(const std::string& name);
 		~Chatroom(void) = default;
 
 		std::string						m_roomName;
