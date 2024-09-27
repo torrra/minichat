@@ -22,6 +22,12 @@ namespace client
             SERV_SHUTDOWN
         };
 
+        enum ClientFlag : unsigned char
+        {
+            CONNECTED   = 1,
+            NAMED       = 1 << 1
+        };
+
     public:
                 ClientApp(void) = default;
                 ~ClientApp(void);
@@ -63,16 +69,13 @@ namespace client
         // Client socket handle
         net::Socket     m_socket;
 
-        // Username
-        std::string     m_name;
-
         // Current user input
         std::string     m_input;
 
         // Server event for polling
         void*           m_serverEvent = nullptr;
 
-        // Is this client connected to a server ?
-        bool            m_connected = false;
+        // Is this client connected to a server with a username ?
+        unsigned char   m_flags = 0;
     };
 }

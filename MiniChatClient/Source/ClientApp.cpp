@@ -39,11 +39,11 @@ namespace client
         case IN_ENTER_PRESSED:
 
             // Get server IP
-            if (!m_connected)
+            if (!(m_flags & CONNECTED))
                 attemptToConnect();
 
             // get username if user just connected
-            else if (m_name.empty())
+            else if (!(m_flags & NAMED))
                 registerUsername();
 
             // send message
@@ -77,7 +77,7 @@ namespace client
         int             timeout = static_cast<int>(INFINITE);
 
         // Wait for server and user input if connected to a valid server
-        if (m_connected)
+        if (m_flags & CONNECTED)
             result = WaitForMultipleObjects(2, handles, FALSE, timeout);
 
         // Only poll user input if not
@@ -116,7 +116,7 @@ namespace client
         {
             // Create WSA event for new messages from server
             m_serverEvent = m_socket.createServerEvent();
-            m_connected = true;
+            m_flags |= CONNECTED;
             net::consoleOutput("Enter username: ");
         }
 
@@ -154,13 +154,11 @@ namespace client
         // Tell server new client has successfully joined
         else
         {
-            m_name = m_input;
-
-            //std::string     joinMessage = m_input;
-            std::string     joinMessage = "/user register ";
-
+            std::string     joinMessage = "/nick ";
 
             joinMessage += m_input;
+
+            m_flags |= NAMED;
             net::consoleOutput("Welcome, %1\n\n", m_input.c_str());
             m_socket.send(joinMessage.c_str(), static_cast<int>(joinMessage.size()));
         }
@@ -324,7 +322,7 @@ namespace client
 
             // do not display message if user has
             // not entered a username yet
-            if (m_name.empty())
+            if (m_flags & NAMED)
                 return;
 
             resetConsoleLine();
