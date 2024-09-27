@@ -33,7 +33,9 @@ namespace net
 		};
 
 		// Create socket
-		createDualStackSocket(&socketData);
+		if(createDualStackSocket(&socketData) != NO_ERROR)
+			return SOCKET_ERROR;
+
 		consoleOutput("Connecting...\n");
 		addrList = static_cast<addrinfo*>(socketData.m_resultAddr);
 
@@ -353,7 +355,12 @@ namespace net
 			hints.ai_flags = AI_PASSIVE;
 
 		if(getaddrinfo(socketData->m_ipString, socketData->m_portString, &hints, &results))
-			reportWindowsError("getaddrinfo", WSAGetLastError());
+		{
+			int		error = WSAGetLastError();
+
+			reportWindowsError("getaddrinfo", error);
+			return error;
+		}
 
 		// Create socket
 		socketData->m_resultAddr = results;
@@ -378,6 +385,13 @@ namespace net
 		// Set v6 only option to false
 		socketOptResult	= setsockopt(m_handle, IPPROTO_IPV6, IPV6_V6ONLY,
 									(const char*)&enabled, sizeof enabled);
+
+		if (socketOptResult != NO_ERROR)
+			reportWindowsError("setsockopt", WSAGetLastError());
+
+		enabled = 1ul;
+		socketOptResult = setsockopt(m_handle, IPPROTO_TCP, TCP_NODELAY,
+								     (const char*)&enabled, sizeof enabled);
 
 		if (socketOptResult != NO_ERROR)
 			reportWindowsError("setsockopt", WSAGetLastError());
