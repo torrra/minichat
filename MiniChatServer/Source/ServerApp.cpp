@@ -1,4 +1,4 @@
-#include "ServerData.h"
+#include "ServerApp.h"
 
 #include <Network/ConsoleOutput.h>
 
@@ -223,35 +223,36 @@ namespace server
 
     void ServerApp::moveToRoom(void)
     {
-        std::string     m_currentMessageCopy = m_currentMessage.m_text;
+        std::string     msgCopy = m_currentMessage.m_text;
         size_t          roomIndex = 0;
-        size_t          namePos = m_currentMessageCopy.find('#');
+        size_t          namePos = msgCopy.find('#');
 
         if (namePos == std::string::npos)
             return;
 
-        removeNewlines(m_currentMessageCopy);
-        m_currentMessageCopy = m_currentMessageCopy.substr(namePos);
+        removeNewlines(msgCopy);
+        msgCopy = msgCopy.substr(namePos);
 
-        for (Chatroom& room :m_rooms)
+        for (Chatroom& room : m_rooms)
         {
-            if (room.m_roomName.compare(m_currentMessageCopy) == 0)
+            if (room.m_roomName.compare(msgCopy) != 0)
             {
-                room.m_users.push_back(m_currentMessage.m_sender);
-
-                std::string     message = m_clientNames[m_currentMessage.m_sender];
-                size_t          currentIndex = m_clientRooms[m_currentMessage.m_sender];
-                Chatroom&       currentRoom = m_rooms[currentIndex];
-
-               removeFromRoom(currentRoom, m_currentMessage.m_sender);
-               m_clientRooms[m_currentMessage.m_sender] = roomIndex;
-
-               sendToServerRoom(room, message + " has joined.\r\n\r\n");
-               sendToServerRoom(currentRoom, message + " has left.\r\n\r\n");
-               displayCurrentUsers();
-               break;
+                ++roomIndex;
+                continue;
             }
-            ++roomIndex;
+            room.m_users.push_back(m_currentMessage.m_sender);
+
+            std::string     username = m_clientNames[m_currentMessage.m_sender];
+            size_t          currentIndex = m_clientRooms[m_currentMessage.m_sender];
+            Chatroom&       currentRoom = m_rooms[currentIndex];
+
+            removeFromRoom(currentRoom, m_currentMessage.m_sender);
+            m_clientRooms[m_currentMessage.m_sender] = roomIndex;
+
+            sendToServerRoom(room, username + " has joined.\r\n\r\n");
+            sendToServerRoom(currentRoom, username + " has left.\r\n\r\n");
+            displayCurrentUsers();
+            break;
         }
     }
 
@@ -261,12 +262,14 @@ namespace server
         Chatroom&       room = m_rooms[roomID];
         net::Socket     serverSocket = m_server.getSocket();
 
+        // send message from user to all other users in a room
         for (net::Socket& recipient : room.m_users)
         {
             if (recipient == m_currentMessage.m_sender)
                 continue;
 
-            serverSocket.sendTo(recipient, m_currentMessage.m_text.c_str(), (int)m_currentMessage.m_text.size());
+            serverSocket.sendTo(recipient, m_currentMessage.m_text.c_str(),
+                               (int)m_currentMessage.m_text.size());
         }
     }
 
@@ -288,6 +291,7 @@ namespace server
 
     void ServerApp::sendToServerRoom(Chatroom& room, const std::string& message)
     {
+        // send message to all users in a given room
         for (const net::Socket& client : room.m_users)
         {
             m_server.getSocket().sendTo(client, message.c_str(),
@@ -298,12 +302,15 @@ namespace server
     void ServerApp::removeFromRoom(Chatroom& room, net::Socket toRemove,
                                    bool disconnected)
     {
+        // find user and remove from room user list
         for (auto iterator = room.m_users.begin();
             iterator != room.m_users.end(); ++iterator)
         {
             if (*iterator != toRemove)
                 continue;
 
+            // remove user from all records if connection
+            // was lost or terminated
             if(disconnected)
             {
                 m_clientRooms.erase(toRemove.getHandle());
@@ -324,6 +331,8 @@ namespace server
            m_rooms.emplace_back("#general", client);
            m_clientRooms[client] = 0;
         }
+
+        // assign new user to #general by default
         if (!m_clientRooms.contains(client))
         {
            m_clientRooms[client] = 0;

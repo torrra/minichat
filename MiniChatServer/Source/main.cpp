@@ -6,7 +6,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#include "ServerData.h"
+#include "ServerApp.h"
 
 static int serverMain(void)
 {
