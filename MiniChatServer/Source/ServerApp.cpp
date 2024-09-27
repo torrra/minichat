@@ -2,8 +2,6 @@
 
 #include <Network/ConsoleOutput.h>
 
-#include "MessageHandling.h"
-
 #ifndef SHUTDOWN_MESSAGE
 #define SHUTDOWN_MESSAGE    "jrII0JB0y6"
 #endif // !SHUTDOWN_MESSAGE
@@ -19,6 +17,8 @@ namespace server
 
         for (const net::Socket& disconnected : invalidClients)
         {
+            // do not attempt to delete a user if no
+            // room was created to store their data
             if (m_rooms.empty())
                 break;
 
@@ -27,6 +27,9 @@ namespace server
             std::string     leaveMsg = m_clientNames[disconnected.getHandle()];
 
             leaveMsg += " has left\r\n\r\n";
+
+            // delete all information about this user and alert other
+            // users in the same room
             removeFromRoom(room, disconnected, true);
             sendToServerRoom(room, leaveMsg);
         }
@@ -45,12 +48,16 @@ namespace server
                 .m_sender = received.getSender().getHandle()
             };
 
+            // assign default room if necessary
             assignRoom(m_currentMessage.m_sender);
 
             // send message to other clients if it is not a command
             if (!checkCommands())
                 formatReceivedMessage();
         }
+
+        // send packets that should
+        // be sent to all clients
         m_server.sendAllPackets();
     }
 
@@ -141,6 +148,7 @@ namespace server
         {
            // list other users connected if client is new
            m_clientNames[m_currentMessage.m_sender] = username;
+           sendToServerRoom(m_rooms[0], username + " has joined.\r\n\r\n");
            displayCurrentUsers();
         }
     }
@@ -151,7 +159,6 @@ namespace server
         std::string             username = m_clientNames[m_currentMessage.m_sender];
         std::string             connectedUsers = "Other users connected: ";
         net::Socket::Handle_t   senderHandle = m_currentMessage.m_sender;
-        Chatroom&               userRoom = m_rooms[m_clientRooms[senderHandle]];
 
         // add all clients to current users list
         for (auto& client :m_clientNames)
@@ -172,8 +179,6 @@ namespace server
                            connectedUsers.c_str(),
                            (int)connectedUsers.size());
 
-        // tell other clients that a new user has joined
-       sendToServerRoom(userRoom, username + " has joined.\r\n\r\n");
     }
 
     void ServerApp::removeNewlines(std::string& str)
@@ -208,15 +213,17 @@ namespace server
             return false;
 
         removeNewlines(roomName);
+
+        // remove user from old room and add to newly created channel
         removeFromRoom(currentRoom, m_currentMessage.m_sender);
+        m_clientRooms[m_currentMessage.m_sender] = m_rooms.size();
+        m_rooms.emplace_back(roomName, m_currentMessage.m_sender);
 
-       m_clientRooms[m_currentMessage.m_sender] = m_rooms.size();
-       m_rooms.emplace_back(roomName, m_currentMessage.m_sender);
-
-        std::string     roomMsg = "Room created successfully\r\n";
+        std::string     roomMsg = "Channel " + roomName + " was created.\r\n\r\n";
         net::Socket     serverSock = m_server.getSocket();
 
-        serverSock.sendTo(m_currentMessage.m_sender, roomMsg.c_str(), (int)roomMsg.size());
+        // tell users that a new room was created
+        m_server.createPacket(roomMsg.c_str(), roomMsg.size());
         net::consoleOutput(roomMsg.c_str());
         return true;
     }
@@ -235,6 +242,7 @@ namespace server
 
         for (Chatroom& room : m_rooms)
         {
+            // wrong room name
             if (room.m_roomName.compare(msgCopy) != 0)
             {
                 ++roomIndex;
@@ -249,6 +257,8 @@ namespace server
             removeFromRoom(currentRoom, m_currentMessage.m_sender);
             m_clientRooms[m_currentMessage.m_sender] = roomIndex;
 
+            // tell users from old room that this user has left, and alert
+            // clients from new room that they have joined
             sendToServerRoom(room, username + " has joined.\r\n\r\n");
             sendToServerRoom(currentRoom, username + " has left.\r\n\r\n");
             displayCurrentUsers();
@@ -327,10 +337,7 @@ namespace server
     {
         // Create default room if none already exists
         if (m_rooms.empty())
-        {
-           m_rooms.emplace_back("#general", client);
-           m_clientRooms[client] = 0;
-        }
+           m_rooms.emplace_back("#general");
 
         // assign new user to #general by default
         if (!m_clientRooms.contains(client))
