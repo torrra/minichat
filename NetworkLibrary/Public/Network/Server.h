@@ -32,8 +32,9 @@ namespace net
         // Accessors
 
         Socket                  getSocket(void)         const;
-        const SocketArray&      getIncoming()           const;
-        const SocketArray&      getOutgoing()           const;
+        const SocketArray&      getIncoming(void)       const;
+        const SocketArray&      getOutgoing(void)       const;
+        const SocketArray&      getInvalid(void)        const;
 
     private:
 
@@ -54,6 +55,9 @@ namespace net
 
         // Client sockets that are able to receive next packet
         std::vector<Socket>         m_outgoingQueue;
+
+        // Clients that have been disconnected
+        std::vector<Socket>         m_invalidClients;
 
         // Next packet to be sent to clients
         std::vector<Packet>         m_outgoingPackets;

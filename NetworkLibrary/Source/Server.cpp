@@ -70,6 +70,11 @@ namespace net
         return m_outgoingQueue;
     }
 
+    const std::vector<Socket>& Server::getInvalid(void) const
+    {
+        return m_invalidClients;
+    }
+
     std::vector<Packet> Server::receiveAllPackets(void)
     {
         std::vector<Packet>     receivedPackets;
@@ -166,6 +171,7 @@ namespace net
     {
         m_incomingQueue.clear();
         m_outgoingQueue.clear();
+        m_invalidClients.clear();
 
         // Read all objects in client array except listening socket (index 0)
         for (size_t index = clients.size() - 1ull; index > 0ull; --index)
@@ -177,10 +183,12 @@ namespace net
             {
                 Socket     toClose(clientEvents.m_socket);
 
+                m_invalidClients.push_back(toClose);
                 toClose.shutdown();
                 toClose.close();
 
                 m_clients.erase(m_clients.begin() + index);
+
                 continue;
             }
 
