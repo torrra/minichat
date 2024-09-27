@@ -79,25 +79,15 @@ namespace server
         // check command type
         switch (m_currentMessage.m_text[1])
         {
+        case 's': shutdownCommand(); return true;
 
-            // system commands
-        case 's':
-            shutdownCommand();
-            return true;
+        case 'n': nicknameCommand(); return true;
 
-            // commands related to user data
-        case 'n':
-            nicknameCommand();
-            return true;
+        case 'c': createChatroom(); return true;
 
-        case 'c':
-            createChatroom();
-            return true;
+        case 'm': moveToRoom(); return true;
 
-        case 'm':
-            moveToRoom();
-            return true;
-
+        case 'l': break;
         default: break;
         }
 
