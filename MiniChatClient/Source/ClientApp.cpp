@@ -298,7 +298,7 @@ namespace client
     ClientApp::ClientEvent ClientApp::checkSpecialMessages(const std::string& message) const
     {
         // look for special shutdown message
-        if (message.find(SHUTDOWN_MSG) != std::string::npos)
+        if (message.compare(SHUTDOWN_MSG) == 0)
             return SERV_SHUTDOWN;
 
         else
@@ -322,7 +322,7 @@ namespace client
 
             // do not display message if user has
             // not entered a username yet
-            if (m_flags & NAMED)
+            if (!(m_flags & NAMED))
                 return;
 
             resetConsoleLine();
