@@ -23,7 +23,18 @@ namespace server
 	void	userSubCommands(const Message& msg, ServerData& server);
 
 	// Username processing
-
 	void    displayCurrentUsers(const Message& msg, ServerData& server);
-	void	removeNewlines(std::string& username);
+
+	// chatrooms
+	bool	createChatroom(const Message& msg, ServerData& server);
+	void	moveToRoom(const Message& msg, ServerData& server);
+	void    sendToRoom(const Message& msg, ServerData& server);
+	void	findSenderRoom(Message& msg, ServerData& server);
+
+	void    removeFromRoom(Chatroom& room, const net::Socket& toRemove);
+	void    assignRoom(const net::Socket::Handle_t client, ServerData& server);
+
+	// Utility
+
+	void	removeNewlines(std::string& string);
 }

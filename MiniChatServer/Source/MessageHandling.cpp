@@ -21,25 +21,11 @@ namespace server
                 .m_sender = received.getSender().getHandle()
             };
 
+            assignRoom(message.m_sender, data);
+
             // send message to other clients if it is not a command
-            if(!checkCommands(message, data, running))
-            {
-                net::Socket::Handle_t   sender = received.getSender().getHandle();
-                std::string             toDisplay = data.m_clientNames[sender];
-
-                // ass username before message
-                toDisplay += " > ";
-                toDisplay += message.m_text;
-
-                net::consoleOutput(toDisplay.c_str());
-
-                // send message to all clients except sender
-                data.m_server.createPacket(toDisplay.c_str(),
-                                           toDisplay.size(),
-                                           message.m_sender);
-
-
-            }
+            if (!checkCommands(message, data, running))
+                findSenderRoom(message, data);
         }
         data.m_server.sendAllPackets();
     }
@@ -61,6 +47,14 @@ namespace server
         // commands related to user data
         case 'u':
             userSubCommands(msg, server);
+            return true;
+
+        case 'c':
+            createChatroom(msg, server);
+            return true;
+
+        case 'm':
+            moveToRoom(msg, server);
             return true;
 
         default: break;
@@ -145,24 +139,145 @@ namespace server
                                      msg.m_sender);
     }
 
-    void removeNewlines(std::string& username)
+    void removeNewlines(std::string& str)
     {
-        for (size_t index = username.size() - 1ull; index > 0ull; --index)
+        for (size_t index = str.size() - 1ull; index > 0ull; --index)
         {
             // delete newline characters and leave at least
             // 1 character in string
-            switch (username[index])
+            switch (str[index])
             {
             case '\n':
-                username.pop_back();
+                str.pop_back();
                 continue;
 
             case '\r':
-                username.pop_back();
+                str.pop_back();
                 continue;
 
             default: return;
             }
+        }
+    }
+
+    bool createChatroom(const Message& msg, ServerData& server)
+    {
+        size_t          pos = msg.m_text.find('#');
+        std::string     roomName = msg.m_text.substr(pos);
+        size_t          currentIndex = server.m_clientRooms[msg.m_sender];
+        Chatroom&       currentRoom = server.m_rooms[currentIndex];
+
+        if (roomName.empty())
+            return false;
+
+        removeNewlines(roomName);
+        removeFromRoom(currentRoom, msg.m_sender);
+
+        server.m_clientRooms[msg.m_sender] = server.m_rooms.size();
+        server.m_rooms.emplace_back(roomName, msg.m_sender);
+
+        std::string     roomMsg = "Room created successfully\r\n";
+        net::Socket     serverSock = server.m_server.getSocket();
+
+        serverSock.sendTo(msg.m_sender, roomMsg.c_str(), (int)roomMsg.size());
+        net::consoleOutput(roomMsg.c_str());
+        return true;
+    }
+
+    void moveToRoom(const Message& msg, ServerData& server)
+    {
+        std::string     msgCopy = msg.m_text;
+        size_t          roomIndex = 0;
+        size_t          namePos = msgCopy.find('#');
+
+        if (namePos == std::string::npos)
+            return;
+
+        removeNewlines(msgCopy);
+        msgCopy = msgCopy.substr(namePos);
+
+        for (Chatroom& room : server.m_rooms)
+        {
+            if (room.m_roomName.compare(msgCopy) == 0)
+            {
+                room.m_users.push_back(msg.m_sender);
+
+                std::string     message = server.m_clientNames[msg.m_sender];
+                size_t          currentIndex = server.m_clientRooms[msg.m_sender];
+                Chatroom&       currentRoom = server.m_rooms[currentIndex];
+
+                removeFromRoom(currentRoom, msg.m_sender);
+                server.m_clientRooms[msg.m_sender] = roomIndex;
+
+                message += " has moved to room ";
+                message += room.m_roomName + "\r\n\r\n";
+                net::consoleOutput(message.c_str());
+
+                server.m_server.createPacket(message.c_str(),
+                                            (int) message.size());
+
+                break;
+            }
+
+            ++roomIndex;
+        }
+    }
+
+    void sendToRoom(const Message& msg, ServerData& server)
+    {
+        size_t          roomID = server.m_clientRooms[msg.m_sender];
+        Chatroom&       room = server.m_rooms[roomID];
+        net::Socket     serverSocket = server.m_server.getSocket();
+
+        for (net::Socket& recipient : room.m_users)
+        {
+            if (recipient == msg.m_sender)
+                continue;
+
+            serverSocket.sendTo(recipient, msg.m_text.c_str(), (int)msg.m_text.size());
+        }
+    }
+
+    void findSenderRoom(Message& msg, ServerData& server)
+    {
+        std::string     toDisplay;
+        size_t          roomIndex = server.m_clientRooms[msg.m_sender];
+
+        toDisplay = server.m_rooms[roomIndex].m_roomName;
+
+        // add username before message
+        toDisplay += " | " + server.m_clientNames[msg.m_sender];
+        toDisplay += " > " + msg.m_text;
+        net::consoleOutput(toDisplay.c_str());
+
+        msg.m_text = toDisplay;
+        sendToRoom(msg, server);
+    }
+
+    void removeFromRoom(Chatroom& room, const net::Socket& toRemove)
+    {
+        for (auto iterator = room.m_users.begin();
+            iterator != room.m_users.end(); ++iterator)
+        {
+            if (*iterator == toRemove)
+            {
+                room.m_users.erase(iterator);
+                break;
+            }
+        }
+    }
+
+    void assignRoom(const net::Socket::Handle_t client, ServerData& server)
+    {
+        if(server.m_rooms.empty())
+        {
+            server.m_rooms.emplace_back("#general", client);
+            server.m_clientRooms[client] = 0;
+        }
+        if (!server.m_clientRooms.contains(client))
+        {
+            server.m_clientRooms[client] = 0;
+            server.m_rooms[0].m_users.push_back(client);
         }
     }
 
