@@ -9,12 +9,22 @@ I. Connect client to server
 	5. client app should display a successful connection message,
 	   while the server app will display the newly connected client's IP address
 
-II. Shut down server
 
-	1. send "/system shutdown" or "/s shutdown" from a client app
+II. Disconnect client and shut down server
+
+Disconnect client without shutting down server:
+
+	1. Press ESC
+
+Shut down server and all clients:
+
+	1. send "/s shutdown" from a client app
 	2. server app will exit and terminate connection with all clients
 	3. client apps will close when enter is pressed
 
+
 III. Special commands
 
-	* Rename user: "/nick <username>" or "/u <username>"
+	* Rename user:						"/u <username>"
+	* Create new channel:				"/c <#channel-name>"
+	* Move to an existing channel:		"/m <channel-name>"
