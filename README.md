@@ -1,6 +1,7 @@
 # Mini chat project
 
-This project contains a network library, a server application and a client application. Both the server application depend on the Network library, which uses WinSock2.
+Simple client/server chat applications.
+Both the server application depend on the Network library, which uses WinSock2.
 
 ## Table of contents
 
