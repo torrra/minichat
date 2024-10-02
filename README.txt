@@ -25,7 +25,7 @@ Shut down server and all clients:
 
 III. Special commands
 
-	* Rename user:						"/u <username>"
-	* Create new channel:				"/c <#channel-name>"
+	* Rename user:				"/u <username>"
+	* Create new channel:			"/c <#channel-name>"
 	* Move to an existing channel:		"/m <channel-name>"
 	* List other users in channel		"/l"
