@@ -4,7 +4,7 @@ This project contains a network library, a server application and a client appli
 
 ## Table of contents
 
-* [Preview]()
+* [Preview](https://github.com/torrra/minichat?tab=readme-ov-file#preview)
 * [How to build](https://github.com/torrra/minichat?tab=readme-ov-file#how-to-build)
 * [How to use](https://github.com/torrra/minichat?tab=readme-ov-file#how-to-use)
 
